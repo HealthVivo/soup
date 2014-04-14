@@ -19,6 +19,7 @@ OPTIONS can be:
     -s      slop (default: 0)
     -m      Moleculo file (Default /mnt/hall13_local/cc2qe/na12878_pacbio...)
     -p      Pacbio file (Default /mnt/hall13_local/cc2qe/na12878_moleculo...)
+    -k      Keep intermediate files
 
 EOF
 }
@@ -37,9 +38,10 @@ PB="/mnt/hall13_local/cc2qe/na12878_pacbio/NA12878.pacbio.splitreads.excldups.br
 MO="/mnt/hall13_local/cc2qe/na12878_moleculo/NA12878.moleculo.splitreads.excldups.breakpoint.dels.bedpe.gz"
 L=
 SLOP=0
+KEEP=0
 
 # Check options passed in.
-while getopts "h m:p:i:s:" OPTION
+while getopts "h m:p:i:s:k" OPTION
 do
     case $OPTION in
         h)
@@ -57,6 +59,9 @@ do
             ;;
 	s)
 	    SLOP=$OPTARG
+	    ;;
+	k)
+	    KEEP=1
 	    ;;
         ?)
             usage
@@ -88,4 +93,7 @@ cat $L.p.slop$SLOP.tmp \
     | awk '{ if ($NF=="NA") { $NF=0 } print $0 }' OFS="\t" \
     > $L.slop$SLOP.val
 
-rm $L.p.slop$SLOP.tmp $L.m.slop$SLOP.tmp
+if [[ $KEEP -ne 1 ]]
+then
+    rm $L.p.slop$SLOP.tmp $L.m.slop$SLOP.tmp
+fi
