@@ -68,12 +68,20 @@ done
 # calculate the number of columns in the input file
 NCOL=`head -n 1 $L | awk '{ print NF }'`
 
-pairToPair -type both -is -slop $SLOP -a <(zcat $PB | awk '{ $1="chr"$1 ; $4="chr"$4 ; print $0 }' OFS="\t") -b $L \
+#pairToPair -type both -is -slop $SLOP -a <(zcat $PB | awk '{ $1="chr"$1 ; $4="chr"$4 ; print $0 }' OFS="\t") -b $L \
+pairToPair -type both -is -slop $SLOP -a <(zcat $PB ) -b $L \
     | awk '$18==$29' \
     | zapdups -u \
     > $L.p.slop$SLOP.tmp
 
-pairToPair -type both -is -slop $SLOP -a <(zcat $MO | awk '{ $1="chr"$1 ; $4="chr"$4 ; print $0 }' OFS="\t") -b $L \
+cat $L.p.slop$SLOP.tmp | sort -k 25 > $L.p.slop$SLOP.tmp.sort
+
+cat $L.p.slop$SLOP.tmp.sort \
+    | /mnt/thor_pool1/user_data/rl6sf/src/lumpy_analysis/truth/filter_pb.py \
+    > $L.p.slop$SLOP.tmp
+
+#pairToPair -type both -is -slop $SLOP -a <(zcat $MO | awk '{ $1="chr"$1 ; $4="chr"$4 ; print $0 }' OFS="\t") -b $L \
+pairToPair -type both -is -slop $SLOP -a <(zcat $MO ) -b $L \
     | awk '$18==$29' \
     | zapdups -u \
     > $L.m.slop$SLOP.tmp
@@ -90,4 +98,4 @@ cat $L.p.slop$SLOP.tmp \
     | awk '{ if ($NF=="NA") { $NF=0 } print $0 }' OFS="\t" \
     > $L.slop$SLOP.val
 
-rm $L.p.slop$SLOP.tmp $L.m.slop$SLOP.tmp
+rm $L.p.slop$SLOP.tmp $L.p.slop$SLOP.tmp.sort $L.m.slop$SLOP.tmp
