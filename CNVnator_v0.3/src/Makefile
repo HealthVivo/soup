@@ -18,8 +18,7 @@ OBJS   = $(OBJDIR)/cnvnator.o  \
 	 $(OBJDIR)/Genotyper.o \
 	 $(OBJDIR)/Interval.o  \
 	 $(OBJDIR)/Genome.o \
-	 $(OBJDIR)/TreeBuilder.o \
-         $(OBJDIR)/AliParser2.o
+	 $(OBJDIR)/TreeBuilder.o
 
 DISTRIBUTION = $(PWD)/CNVnator_$(VERSION).zip
 TMPDIR	     =  /tmp
