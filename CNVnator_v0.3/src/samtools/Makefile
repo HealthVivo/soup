@@ -1,4 +1,4 @@
-CC=		clang	
+CC=		gcc	
 CFLAGS=		-g -Wall -O2
 #LDFLAGS=		-Wl,-rpath,\$$ORIGIN/../lib
 DFLAGS=		-D_FILE_OFFSET_BITS=64 -D_LARGEFILE64_SOURCE -D_USE_KNETFILE -D_CURSES_LIB=1
