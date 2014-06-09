@@ -162,7 +162,7 @@ void *tree_thread_run(void *data)
 {
     thd_data *tdata = (thd_data *)data;
     AliParser parser = AliParser(tdata->data->file, true);
-    cout << "Processing BAM data corresponding to chrom " << tdata->data->cname << endl;
+    // cout << "Processing BAM data corresponding to chrom " << tdata->data->cname << endl;
     parser.parseRegion(align_fetch, tdata->data->name, tdata->data);
     
     // clean up
