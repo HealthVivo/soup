@@ -4,7 +4,7 @@
 #include "Genome.hh"
 #include "Interval.hh"
 
-static const int N_CHROM_MAX = 10000;
+static const int N_CHROM_MAX = 100000;
 
 double my_gaus(double *x_arr,double *par)
 {
@@ -3105,59 +3105,6 @@ int findIndex(string *arr,int n,string name)
   return -1;
 }
 
-#include "AliParser2.hh"
-typedef struct {
-    string file;
-    string chunk;
-    int clen;
-    uint64_t n_placed;
-    bool forUnique;
-    short *counts_p;
-    short *counts_u;
-    TH2 *his_frg_read;
-} chrom_hist_data;
-
-static int alignment_fetch(const bam1_t *align, void *data)
-{
-    AlignmentData x = AlignmentData(align);
-    if (x.isUnmapped() || x.isDuplicate()) {
-        return 0;
-    }
-    chrom_hist_data *hist_data = (chrom_hist_data *)data;
-    
-    // update counts
-    int mid = abs(x.getStart() + x.getEnd()) >> 1;
-    if (hist_data->counts_p[mid] + 1 > 0) {
-        hist_data->counts_p[mid]++;
-    }
-    if (hist_data->forUnique && !x.isQ0()) {
-        if (hist_data->counts_u[mid] + 1 > 0) {
-            hist_data->counts_u[mid]++;
-        }
-    }
-    hist_data->n_placed++;
-    int frg_len = x.getFragmentLength();
-    if (frg_len < 0) {
-        hist_data->his_frg_read->Fill(x.getReadLength(),-frg_len);
-    } else {
-        hist_data->his_frg_read->Fill(x.getReadLength(), frg_len);
-    }
-    return 0;
-}
-
-static void *thread_run(void *data)
-{
-    chrom_hist_data *hist_data = (chrom_hist_data *)data;
-    AliParser2 parser = AliParser2(hist_data->file);
-    // TODO: this is a hack
-    string search_name = hist_data->chunk;
-    if (hist_data->chunk.find("chr") == 0) {
-        search_name = hist_data->chunk.substr(3);
-    }
-    parser.parseRegion(alignment_fetch, search_name.c_str(), hist_data);
-    return hist_data;
-}
-
 void HisMaker::produceTrees(string *user_chroms,int n_chroms,
 			    string *user_files,int n_files,
 			    bool forUnique)
@@ -3193,6 +3140,7 @@ void HisMaker::produceTrees(string *user_chroms,int n_chroms,
   
 
   long n_placed = 0;
+  int ati = 0;
   for (int f = 0;f < n_files;f++) {
 
     if (user_files[f].length() > 0)
@@ -3254,58 +3202,113 @@ void HisMaker::produceTrees(string *user_chroms,int n_chroms,
     cout<<"Allocating memory ..."<<endl;
     for (int c = 0;c < ncs;c++) {
       if (!counts_p[c]) {
-          counts_p[c] = new short[clens[c] + 1];
-          memset(counts_p[c],0,(clens[c] + 1)*sizeof(short));
+	counts_p[c] = new short[clens[c] + 1];
+	memset(counts_p[c],0,(clens[c] + 1)*sizeof(short));
       }
       if (forUnique && !counts_u[c]) {
-          counts_u[c] = new short[clens[c] + 1];
-          memset(counts_u[c],0,(clens[c] + 1)*sizeof(short));
+	counts_u[c] = new short[clens[c] + 1];
+	memset(counts_u[c],0,(clens[c] + 1)*sizeof(short));
       }
     }
     cout<<"Done."<<endl;
+
+    int    prev_chr_ind = -1,chr_ind;
+    string prev_chr("");
+    while (parser->parseRecord()) {
+      if (parser->isUnmapped())  continue;
+      if (parser->isDuplicate()) continue;
+
+      if (use_ref) { // Using reference genome
+	string chr = parser->getChromosome();
+	if (chr == prev_chr) chr_ind = prev_chr_ind;
+	else {
+	  chr_ind      = refGenome_->getChromosomeIndex(chr);
+	  prev_chr     = chr;
+	  if (chr_ind < 0 && !unknown.FindObject(chr.c_str())) {
+	      cerr<<"Unknown chromosome/contig '"<<chr<<"' for genome "
+		  <<refGenome_->name()<<"."<<endl;
+	      unknown.Add(new TNamed(chr.c_str(),""));
+	  }
+	}
+      } else chr_ind = parser->getChromosomeIndex(); // bam/sam
+        
+      if (chr_ind < 0) continue;
+      chr_ind = reindex[chr_ind];
+      if (chr_ind < 0 || chr_ind >= ncs) continue;
+      int mid = abs(parser->getStart() + parser->getEnd())>>1;
+      if (mid < 0 || mid > clens[chr_ind]) {
+	cerr<<"Out of bound coordinate "<<mid<<" for '"
+	    <<parser->getChromosome()<<"'."<<endl;
+	continue;
+      }
+
+      // Doing counting
+      if (counts_p[chr_ind][mid] + 1 > 0) counts_p[chr_ind][mid]++;
+      if (forUnique && !parser->isQ0())
+	if (counts_u[chr_ind][mid] + 1 > 0) counts_u[chr_ind][mid]++;
+      n_placed++;
       
-      pthread_t tid[ncs];
-      for (int x = 0; x < ncs; x++)
-      {
-          AliParser2 parser(user_files[f]);
-          chrom_hist_data *hist_data = new chrom_hist_data();
-          hist_data->counts_p = counts_p[x];
-          hist_data->counts_u = counts_u[x];
-          hist_data->forUnique = forUnique;
-          string hist_name = string("read_frg_len_") + string(cnames[x]);
-          hist_data->his_frg_read = new TH2I(hist_name.c_str(),"Read and fragment lengths", 300,0.5,300.5,3001,-0.5,3000.5);
-          hist_data->file = string(user_files[f]);
-          hist_data->chunk = string(cnames[x]);
-          hist_data->clen = clens[x];
-          
-          memset(&tid[x], 0x00, sizeof(pthread_t));
-          pthread_create(&tid[x], NULL, thread_run, hist_data);
-      }
-      
-      void *thread_data = NULL;
-      TObjArray list = TObjArray();
-      for (int x = 0; x < ncs; x++) {
-          pthread_join(tid[x], &thread_data);
-          if (thread_data == NULL) {
-              continue;
-          }
-          chrom_hist_data *hist_data = (chrom_hist_data *)thread_data;
-          list.Add(hist_data->his_frg_read);
-          n_placed += hist_data->n_placed;
-          
-          cout<<"Filling and saving tree for '"<<hist_data->chunk<<"' ..."<<endl;
-          short *arru = &counts_u[x][1];
-          short *arrp = &counts_p[x][1];
-          writeTreeForChromosome(hist_data->chunk, arrp, arru, hist_data->clen);
-          delete(hist_data);
-      }
-      his_frg_read->Merge(&list);
-      for (int x = 0; x < ncs; x++) {
-          TH2 *tmp = (TH2 *)list.First();
-          list.RemoveAt(0);
-          if (tmp != NULL) { delete tmp; }
-      }
+      int frg_len = parser->getFragmentLength();
+      if (frg_len < 0) his_frg_read->Fill(parser->getReadLength(),-frg_len);
+      else             his_frg_read->Fill(parser->getReadLength(), frg_len);
+
+//       // Parsing AT runs
+//       if (atlens[chr_ind] < 0) {
+// 	int len = clens[chr_ind];
+// 	char *seq_buffer = new char[len + 1000];
+// 	if (readChromosome(cnames[chr_ind],seq_buffer,len) == len)
+// 	  atlens[chr_ind] = parseGCandAT(seq_buffer,len,&at_se[chr_ind]);
+// 	else cerr<<"Read sequence is different from expectation."<<endl;
+// 	if (atlens[chr_ind] < 0) atlens[chr_ind] = 0;
+// 	delete[] seq_buffer;
+//       }
+//       if (chr_ind != prev_chr_ind) ati = 0;
+
+//       // Aggregating over AT runs
+//       int atn = atlens[chr_ind];
+//       if (atn > 0) {
+// 	int mid2 = 0;
+// 	if (frg_len > 0)
+// 	  mid2 = parser->getStart() + frg_len - (mid - parser->getStart()) - 1;
+// 	if (frg_len < 0)
+// 	  mid2 = parser->getEnd()   + frg_len + (mid - parser->getStart()) + 1;
+// 	int *at_run = at_se[chr_ind];
+// 	ati++;
+// 	while (at_run[ati] + WIN > mid && ati > 0)   ati -= 2;
+// 	while (mid > at_run[ati] + WIN && ati < atn) ati += 2;
+// 	ati--;
+// 	for (int j = ati;j < atn;j += 2) {
+// 	  if (mid < at_run[j] - WIN) break;
+// 	  int len = at_run[j + 1] - at_run[j] + 1;
+// 	  if (len > 60) len = 60;
+// 	  int offset1 = mid - at_run[j],offset2 = mid2 - at_run[j];
+// 	  if (offset1 > 0) {
+// 	    offset1 = mid - at_run[j + 1];
+// 	    if (offset1 < 0) offset1 = 0;
+// 	  }
+// 	  if (offset2 > 0) {
+// 	    offset2 = mid2 - at_run[j + 1];
+// 	    if (offset2 < 0) offset2 = 0;
+// 	  }
+// 	  his_at_aggr->Fill(len,offset1);
+// 	  if (frg_len != 0)
+// 	    his_pair_pos->Fill(len,offset1,offset2);
+// 	}
+//       }
+
+      prev_chr_ind = chr_ind;
+    }
+    delete parser;
   }
+
+  for (int c = 0;c < ncs;c++) 
+    if (counts_p[c]) {
+      cout<<"Filling and saving tree for '"<<cnames[c]<<"' ..."<<endl;
+      short *arru = NULL, *arrp = NULL;
+      if (counts_u[c]) arru = &counts_u[c][1];
+      if (counts_p[c]) arrp = &counts_p[c][1];
+      writeTreeForChromosome(cnames[c],arrp,arru,clens[c]);
+    }
 
   cout<<"Writing histograms ... "<<endl;
   writeHistograms(his_frg_read,his_at_aggr,his_pair_pos);

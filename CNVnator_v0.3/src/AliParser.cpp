@@ -78,6 +78,16 @@ AliParser::~AliParser()
   if (clens_)  delete[] clens_;
 }
 
+int AliParser::parseRegion(bam_fetch_f callback, const string &chunk, void *data)
+{
+    int tid = 0, beg = 0, end = 0;
+    if (bam_parse_region(this->file->header, chunk.c_str(), &tid, &beg, &end) < 0) {
+        return -1;
+    }
+    bam_fetch(this->file->x.bam, this->index, tid, beg, end, data, callback);
+    return 0;
+}
+
 bool AliParser::parseRecord()
 {
   chr_index_ = -1;

@@ -84,6 +84,9 @@ public:
 
 private:
   bool parseSamLine(istream *sin);
+    
+public:
+    int parseRegion(bam_fetch_f callback, const string &chunk, void *data);
 };
 
 #endif

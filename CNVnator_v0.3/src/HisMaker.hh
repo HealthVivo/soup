@@ -70,9 +70,8 @@ private:
   TCanvas *canv_view; // Canvas for displaying
   Genome *refGenome_;
   string dir_;
-    
+
 public:
-    HisMaker() {}
   HisMaker(string rootFile,Genome *genome = NULL);
   HisMaker(string rootFile,int binSize,bool useGCcorrected,
 	   Genome *genome = NULL);

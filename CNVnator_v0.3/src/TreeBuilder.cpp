@@ -1,14 +1,5 @@
-//
-//  TreeBuilder.cpp
-//  cnvator
-//
-//  Created by DBR on 6/4/14.
-//  Copyright (c) 2014 a. All rights reserved.
-//
-
 #include "TreeBuilder.hh"
 #include "AliParser.hh"
-#include "AliParser2.hh"
 #include <stdlib.h>
 #include <TH1D.h>
 #include <TH2D.h>
@@ -24,14 +15,14 @@
 using namespace std;
 
 typedef struct {
-    string file;
+    string file;    // file name to parser
     string name;    // chrom name
     string cname;   // canonical chrom name
-    uint32_t clen;
-    uint64_t n_placed;
-    short *counts_p;
-    short *counts_u;
-    TH2 *his_frg_read;
+    uint32_t clen;  // chrom len
+    uint64_t n_placed;  // number of alignments processed
+    short *counts_p;    // counts
+    short *counts_u;    // counts (unique)
+    TH2 *his_frg_read;  // 2D histogram
 } chrom_hist_data;
 
 
@@ -170,7 +161,7 @@ typedef struct {
 void *tree_thread_run(void *data)
 {
     thd_data *tdata = (thd_data *)data;
-    AliParser2 parser = AliParser2(tdata->data->file);
+    AliParser parser = AliParser(tdata->data->file, true);
     cout << "Processing BAM data corresponding to chrom " << tdata->data->cname << endl;
     parser.parseRegion(align_fetch, tdata->data->name, tdata->data);
     
@@ -256,7 +247,7 @@ int TreeBuilder::build(string *user_chroms, int chroms_len, string user_file)
     
     // build a list of chromosome names and lengths
     // these are the chromosomes that we need to process
-    AliParser *parser = new AliParser(user_file.c_str());
+    AliParser *parser = new AliParser(user_file.c_str(), true);
     vector<pair<string, size_t> > chroms;
     if (parser->numChrom() == 0)
     {
