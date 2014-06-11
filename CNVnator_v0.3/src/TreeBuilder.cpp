@@ -96,7 +96,6 @@ void TreeBuilder::writeTreeForChromosome(string chrom, short *arr_p, short *arr_
     tree->Branch("rd_parity",&rd_p,"rd_p/S");
     // Filling the tree
     for (int i = 0;i < len;i++) {
-        //if (i%100000 == 0) cout<<i<<endl;
         rd_u = (arr_u) ? arr_u[i] : 0;
         rd_p = (arr_p) ? arr_p[i] : 0;
         if (rd_u > 0 || rd_p > 0) {
@@ -120,14 +119,14 @@ int align_fetch(const bam1_t *align, void *data)
     if (x.isUnmapped() || x.isDuplicate()) {
         return 0;
     }
-    chrom_hist_data *hist_data = (chrom_hist_data *)data;
     
     // update counts
+    chrom_hist_data *hist_data = (chrom_hist_data *)data;
     int mid = abs(x.getStart() + x.getEnd()) >> 1;
     if (mid < 0 || mid > hist_data->clen) {
-        // out of bounds
-        return 0;
+        return 0; // out of bounds
     }
+    
     if (hist_data->counts_p[mid] + 1 > 0) {
         hist_data->counts_p[mid]++;
     }
@@ -198,6 +197,7 @@ void TreeBuilder::buildParallel(const string &fn, const vector<pair<string, size
         hist_data->name = chroms[x].first;
         hist_data->cname = Genome::makeCanonical(chroms[x].first);
         hist_data->clen = (uint32_t)chroms[x].second;
+        hist_data->n_placed = 0;
         tdata.push_back(hist_data);
         counts_.push_back(hist_data);
         
