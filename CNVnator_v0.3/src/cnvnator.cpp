@@ -20,6 +20,8 @@ int main(int argc,char *argv[])
   usage += argv[0];
   usage += " -root out.root  [-genome name] [-chrom 1 2 ...] -tree  file1.bam ...\n";
   usage += argv[0];
+  usage += " -root out.root  [-genome name] [-chrom 1 2 ...] -ptree  file1.bam ...\n";
+  usage += argv[0];
   usage += " -root out.root  [-genome name] [-chrom 1 2 ...] -merge file1.root ...\n";
   usage += argv[0];
   usage += " -root file.root [-genome name] [-chrom 1 2 ...] [-d dir] -his bin_size\n";

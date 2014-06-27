@@ -1487,6 +1487,9 @@ void HisMaker::calcLevels(double *level,bool *mask,int n_bins,int bin_band,
     for (int i = 0;i <= win;i++) {
         exps[i] = i*exp(-0.5*i*i*inv2_bin_band);
     }
+    // create lookup tables to speed up the calculation of e^x
+    // we do two lookup tables, one for integer values of x and one for values of x between 0 and 1
+    // for any value of x, where x = i.d (i = int part, d = decimal part), we have: e^x = e^(i+d) = e^i*e^d
     if (!expit) {
         expit = new double[1000]();
         expft = new double[EXPFT_SIZE]();
