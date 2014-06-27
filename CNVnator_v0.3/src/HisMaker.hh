@@ -76,6 +76,7 @@ public:
   HisMaker(string rootFile,int binSize,bool useGCcorrected,
 	   Genome *genome = NULL);
   ~HisMaker();
+    static void *run(void *);
 
   // Input/output
 private:

@@ -4,7 +4,7 @@
 #include "Genome.hh"
 #include "Interval.hh"
 
-static const int N_CHROM_MAX = 100000;
+static const int N_CHROM_MAX = 10000;
 
 double my_gaus(double *x_arr,double *par)
 {
@@ -1111,6 +1111,7 @@ int HisMaker::getChromNamesWithHis(string *names,bool useATcorr,bool useGCcorr)
   return ret;
 }
 
+
 void HisMaker::partition(string *user_chroms,int n_chroms,
 			 bool skipMasked,bool useATcorr,bool useGCcorr,
 			 int range)
@@ -1167,7 +1168,7 @@ void HisMaker::partition(string *user_chroms,int n_chroms,
       mask[b] = false;
       rd[b]   = his->GetBinContent(b + 1);
     }
-    
+      
     for (int bin_band = 2;bin_band <= range;bin_band++) {
       
       cout<<"Bin band is "<<bin_band<<endl;
@@ -1471,76 +1472,132 @@ void HisMaker::updateMask_skip(double *rd,double *level,bool *mask,int n_bins,
   }
 }
 
+#define EXPFT_SIZE  1000000
+static double *expit = NULL; // integer table for exp(x)
+static double *expft = NULL; // floating-point table for exp(x)
+
 void HisMaker::calcLevels(double *level,bool *mask,int n_bins,int bin_band,
 			  double mean,double sigma,bool skipMasked)
 {
-  double *grad_b = new double[n_bins];
-  for (int b = 0;b < n_bins;b++) grad_b[b] = 0;
-
-  double inv2_bin_band = 1./(bin_band*bin_band);
-  double mean_4 = mean/4, sigma_2 = 4/(sigma*sigma),ms2 = mean/(sigma*sigma);
-  int    win = 3*bin_band;
-  double *exps = new double[win + 1];
-  for (int i = 0;i <= win;i++)
-    exps[i] = i*TMath::Exp(-0.5*i*i*inv2_bin_band);
-  for (int b = 0;b < n_bins;b++) {
-    if (mask[b]) continue;
-    double inv_b = 0; int d = 0;
-    if (level[b] < mean_4) inv_b = sigma_2;
-    else                   inv_b = ms2/level[b];
-    for (int i = b + 1;i < n_bins;i++) {
-      if (mask[i]) continue;
-      d++;
-      double inv_i = 0;
-      if (level[i] < mean_4) inv_i = sigma_2;
-      else                   inv_i = ms2/level[i];
-      double r = level[i] - level[b];
-      double val = -0.5*r*r;
-      grad_b[b] += exps[d]*TMath::Exp(val*inv_b);
-      grad_b[i] -= exps[d]*TMath::Exp(val*inv_i);
-      if (d == win) break;
+    double *grad_b = new double[n_bins]();
+    double inv2_bin_band = 1./(bin_band*bin_band);
+    double mean_4 = mean/4, sigma_2 = 4/(sigma*sigma),ms2 = mean/(sigma*sigma);
+    int    win = 3*bin_band;
+    double *exps = new double[win + 1];
+    for (int i = 0;i <= win;i++) {
+        exps[i] = i*exp(-0.5*i*i*inv2_bin_band);
     }
-  }
-
-  // Calculating levels
-  for (int b = 0;b < n_bins;b++) {
-    if (mask[b]) continue;
-    int b_start = b;
-
-    // Finding region by bins
-    if (skipMasked) {
-      while (b < n_bins && (grad_b[b] >= 0 || mask[b])) b++;
-      while (b < n_bins && (grad_b[b] <  0 || mask[b])) b++;
-    } else {
-      while (b < n_bins && grad_b[b] >= 0 && !mask[b]) b++;
-      while (b < n_bins && grad_b[b] <  0 && !mask[b]) b++;
+    if (!expit) {
+        expit = new double[1000]();
+        expft = new double[EXPFT_SIZE]();
+        for (int idx = 0; idx < 1000; idx++) {
+            expit[idx] = exp(-idx);
+        }
+        for (int idx = 0; idx < EXPFT_SIZE; idx++) {
+            expft[idx] = exp(-idx/(double)EXPFT_SIZE);
+        }
     }
-    int b_stop = --b;
-    if (b_start > b_stop) {
-      cerr<<"Abnormal range ("<<b_start<<", "<<b_stop<<")"<<endl;
-      b = b_start;
-      continue;
+    
+    for (int b = 0;b < n_bins;b++)
+    {
+        if (mask[b]) {
+            continue;
+        }
+        double inv_b = 0; int d = 0;
+        if (level[b] < mean_4) {
+            inv_b = sigma_2;
+        } else {
+            inv_b = ms2/level[b];
+        }
+        for (int i = b + 1;i < n_bins;i++) {
+            if (mask[i]) {
+                continue;
+            }
+            d++;
+            double inv_i = 0;
+            if (level[i] < mean_4) {
+                inv_i = sigma_2;
+            } else {
+                inv_i = ms2/level[i];
+            }
+            double r = level[i] - level[b];
+            
+            double valb = -0.5*r*r*inv_b;
+            double vali = -0.5*r*r*inv_i;
+            double val_intb = 0;
+            double val_inti = 0;
+            double values[2] = {modf(valb, &val_intb), modf(vali, &val_inti)};
+            // vecexp_taylor13(values, 2);
+            
+            if (valb > -1000) {
+                grad_b[b] += exps[d]*expit[-(int)val_intb]*expft[-(int)(EXPFT_SIZE*values[0])];
+            } else {
+                grad_b[b] += exps[d]*exp(valb);
+            }
+            if (vali > -1000) {
+                grad_b[i] -= exps[d]*expit[-(int)val_inti]*expft[-(int)(EXPFT_SIZE*values[1])];
+            } else {
+                grad_b[i] -= exps[d]*exp(vali);
+            }
+            if (d == win) {break;}
+        }
     }
 
-    // Calculating level
-    double nl = 0;
-    int n = 0;
-    for (int i = b_start;i <= b_stop;i++) {
-      if (mask[i]) continue;
-      nl += level[i];
-      n++;
-    }
-    if (n <= 0) {
-      cerr<<"Region of length <= 0 between "<<b_start<<" and "<<b_stop<<endl;
-      continue;
-    }
-    nl *= getInverse(n);
-    for (int i = b_start;i <= b_stop;i++) 
-      if (!mask[i]) level[i] = nl;
-  }
+    // Calculating levels
+    for (int b = 0; b < n_bins; b++)
+    {
+        if (mask[b]) {
+           continue;
+        }
+        int b_start = b;
 
-  delete[] exps;
-  delete[] grad_b;
+        // Finding region by bins
+        if (skipMasked) {
+            while (b < n_bins && (grad_b[b] >= 0 || mask[b])) {
+               b++;
+            }
+            while (b < n_bins && (grad_b[b] <  0 || mask[b])) {
+                b++;
+            }
+        } else {
+            while (b < n_bins && grad_b[b] >= 0 && !mask[b]) {
+               b++;
+            }
+            while (b < n_bins && grad_b[b] <  0 && !mask[b]) {
+               b++;
+            }
+        }
+        int b_stop = --b;
+        if (b_start > b_stop) {
+            cerr<<"Abnormal range ("<<b_start<<", "<<b_stop<<")"<<endl;
+            b = b_start;
+            continue;
+        }
+
+        // Calculating level
+        double nl = 0;
+        int n = 0;
+        for (int i = b_start;i <= b_stop;i++) {
+            if (mask[i]) {
+               continue;
+            }
+            nl += level[i];
+            n++;
+        }
+        if (n <= 0) {
+            cerr<<"Region of length <= 0 between "<<b_start<<" and "<<b_stop<<endl;
+            continue;
+        }
+        nl *= getInverse(n);
+        for (int i = b_start;i <= b_stop;i++) {
+            if (!mask[i]) {
+                level[i] = nl;
+            }
+        }
+    }
+    
+    delete[] exps;
+    delete[] grad_b;
 }
 
 bool HisMaker::mergeLevels(double *level,int n_bins,double delta)

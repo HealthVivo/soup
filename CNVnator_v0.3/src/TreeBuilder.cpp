@@ -249,38 +249,19 @@ int TreeBuilder::build(string *user_chroms, int chroms_len, string user_file)
     // these are the chromosomes that we need to process
     AliParser *parser = new AliParser(user_file.c_str(), true);
     vector<pair<string, size_t> > chroms;
-    if (parser->numChrom() == 0)
-    {
-        // if no chrom desc was given and if the parser doesn't have any chrom data (i.e., suppose we're reading from STDIN),
-        // use chrom data from our ref genome as a basis
+    if (parser->numChrom() == 0) {
         cout << "No chromosome / contig description given." << endl;
-        if (refGenome_ == NULL) {
-            cerr << "No reference genome specified. Aborting parsing." << endl;
-            return -1;
-        }
-        cout << "Using " << refGenome_->name() << " as reference genome." << endl;
-        // if the user specified chroms, we'll use that subset from the ref genome
-        // otherwise, we'll use everything from the ref genome
-        for (int c = 0; c < refGenome_->numChrom(); c++) {
-            string name = refGenome_->chromName(c);
-            if (chroms_len > 0 && findIndex(user_chroms, chroms_len, name) < 0) {
-                continue;
-            }
-            chroms.push_back(pair<string, size_t>(name, refGenome_->chromLen(c)));
-        }
-    } else {
-        // otherwise, we use the parser's chroms as a basis
-        // again, proc only the user-specified chroms list, or proc all chroms from the parser if the user didn't specify anything
-        for (int c = 0; c < parser->numChrom(); c++) {
-            string name = parser->chromName(c);
-            if (chroms_len > 0 && findIndex(user_chroms, chroms_len, name) < 0) {
-                continue;
-            }
-            chroms.push_back(pair<string, size_t>(name, parser->chromLen(c)));
-        }
+        return -1;
     }
-    
-    // parallel parsing: input is file-based, and we have file data and can do random access
+    // use the parser's chroms as a basis
+    // proc only the user-specified chroms list, or proc all chroms from the parser if the user didn't specify anything
+    for (int c = 0; c < parser->numChrom(); c++) {
+        string name = parser->chromName(c);
+        if (chroms_len > 0 && findIndex(user_chroms, chroms_len, name) < 0) {
+            continue;
+        }
+        chroms.push_back(pair<string, size_t>(name, parser->chromLen(c)));
+    }
     this->buildParallel(user_file, chroms);
     return 0;
 }

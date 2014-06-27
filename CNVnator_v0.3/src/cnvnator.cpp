@@ -59,6 +59,7 @@ int main(int argc,char *argv[])
   static const int OPT_GENOTYPE   = 0x100;
   static const int OPT_EVAL       = 0x200;
   static const int OPT_PE         = 0x400;
+  static const int OPT_PTREE      = 0x800; // parallelized tree
 
   static const int OPT_SPARTITION = 0x1000;
   static const int OPT_HIS_NEW    = 0x2000;
@@ -82,10 +83,11 @@ int main(int argc,char *argv[])
   int index = 1;
   while (index < argc) {
     string option = argv[index++];
-    if (option == "-tree"  || option == "-merge" || option == "-pe") {
+    if (option == "-tree"  || option == "-merge" || option == "-pe" || option == "-ptree") {
       if (option == "-tree")  opts[n_opts++] = OPT_TREE;
       if (option == "-merge") opts[n_opts++] = OPT_MERGE;
       if (option == "-pe")    opts[n_opts++] = OPT_PE;
+      if (option == "-ptree") opts[n_opts++] = OPT_PTREE;
       while (index < argc && argv[index][0] != '-')
 	if (strlen(argv[index++]) > 0) data_files[n_files++] = string(argv[index - 1]);
     } else if (option == "-his"       || option == "-his_new"    ||
@@ -200,12 +202,17 @@ int main(int argc,char *argv[])
   for (int o = 0;o < n_opts;o++) {
     int option = opts[o];
     int bin = bins[o]; if (bin <= 0) bin = gbin;
-    if (option == OPT_TREE) { // tree
+    if (option == OPT_PTREE) { // tree
         TreeBuilder builder(genome, out_root_file, 32, forUnique);
         for (int idx = 0; idx < n_files; idx++) {
             builder.build(chroms, n_chroms, data_files[idx]);
         }
         (void)builder.syncData();
+    }
+    if (option == OPT_TREE) { // tree
+        HisMaker maker(out_root_file,genome);
+        maker.setDataDir(dir);
+        maker.produceTrees(chroms,n_chroms,data_files,n_files,forUnique);
     }
     if (option == OPT_MERGE) { // merge
       HisMaker maker(out_root_file,genome);

@@ -113,6 +113,7 @@ AFTER_PART_FN = "after_partition_copy.cpp"
 MAX_PROCS = 128
 ROOT_EXT = ".root"
 HIST_EXT = ".hist"
+CNVNATOR = "cnvnator"
 
 
 # get root file name
@@ -178,7 +179,7 @@ def run_partition(bin_size, root_fn, chroms):
 	proc_idx = 0
 	while proc_idx < len(chroms): 
 		x = chroms[proc_idx]
-		part_dict[x] = subprocess.Popen(['cnvnator', '-root', 'chr%s.root'%x, '-partition', bin_size, '-chrom', x], stdout = devnull)
+		part_dict[x] = subprocess.Popen([CNVNATOR, '-root', 'chr%s.root'%x, '-partition', bin_size, '-chrom', x], stdout = devnull)
 		print ("Now partitioning chrom %s" % x)
 		proc_idx += 1
 		if proc_idx >= MAX_PROCS: break
@@ -205,7 +206,7 @@ def run_partition(bin_size, root_fn, chroms):
 			# since we spawn up to max_procs number of procs at once, we might have more things to run...
 			if proc_idx < len(chroms):
 				x = chroms[proc_idx]
-				part_dict[x] = subprocess.Popen(['cnvnator', '-root', 'chr%s.root'%x, '-partition', bin_size, '-chrom', x], stdout = devnull)
+				part_dict[x] = subprocess.Popen([CNVNATOR, '-root', 'chr%s.root'%x, '-partition', bin_size, '-chrom', x], stdout = devnull)
 				print ("Now partitioning chrom %s" % x)
 				proc_idx += 1
 	devnull.close()
@@ -219,12 +220,12 @@ def run_hist_stats(bin_size, bam_fn, chroms_dir):
 	hist_fn = get_hist_fn(bam_fn)
 
 	print "===== Running histograms on input data for input bin size"
-	ret = subprocess.call(['cnvnator', '-his', bin_size, '-d', chroms_dir, '-root', root_fn, '-outroot', hist_fn]) 
+	ret = subprocess.call([CNVNATOR, '-his', bin_size, '-d', chroms_dir, '-root', root_fn, '-outroot', hist_fn]) 
 	if ret != 0:
 		print "Error computing histograms (input bin size)."
 		return ret
 	print "===== Running stats on input data for input bin size"
-	ret = subprocess.call(['cnvnator', '-stat', bin_size, '-root', hist_fn]) 
+	ret = subprocess.call([CNVNATOR, '-stat', bin_size, '-root', hist_fn]) 
 	if ret != 0:
 		print "Error computing histograms (input bin size)."
 		return ret
@@ -233,12 +234,12 @@ def run_hist_stats(bin_size, bam_fn, chroms_dir):
 		return 0
 	
 	#print "===== Running histograms on input data for bin size 1000"
-	ret = subprocess.call(['cnvnator', '-his', '1000', '-d', chroms_dir, '-root', root_fn, '-outroot', hist_fn]) 
+	ret = subprocess.call([CNVNATOR, '-his', '1000', '-d', chroms_dir, '-root', root_fn, '-outroot', hist_fn]) 
 	if ret != 0:
 		print "Error computing histograms (bin size 1000)."
 		return ret
 	#print "===== Running stats on input data for bin size 1000"
-	ret = subprocess.call(['cnvnator', '-stat', '1000', '-root', hist_fn]) 
+	ret = subprocess.call([CNVNATOR, '-stat', '1000', '-root', hist_fn]) 
 	if ret != 0:
 		print "Error computing stats (bin size 1000)."
 		return ret
@@ -250,7 +251,7 @@ def run_hist_stats(bin_size, bam_fn, chroms_dir):
 def run_calls(bin_size, hist_fn, out_fn):
 	print "===== Running calls on input data"
 	f = open(out_fn, 'w')
-	ret = subprocess.call(['cnvnator', '-call', bin_size, '-root', hist_fn], stdout = f) 
+	ret = subprocess.call([CNVNATOR, '-call', bin_size, '-root', hist_fn], stdout = f) 
 	f.close()
 	if ret != 0:
 		print "Error computing calls."
@@ -261,7 +262,7 @@ def run_calls(bin_size, hist_fn, out_fn):
 # run tree
 def run_tree(bam_fn, genome):
 	print "===== Running tree on input data"
-	ret = subprocess.call(['cnvnator', '-root', get_root_fn(bam_fn), '-genome', genome, '-tree', bam_fn, '-unique'])
+	ret = subprocess.call([CNVNATOR, '-root', get_root_fn(bam_fn), '-genome', genome, '-ptree', bam_fn, '-unique'])
 	if ret != 0:
 		print "Error in tree creation"
 	return ret
