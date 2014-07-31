@@ -281,7 +281,7 @@ double HisMaker::testTwoRegions(double m1,double s1,int n1,
 }
 
 double HisMaker::getEValue(double mean,double sigma,double *rd,
-			   int start,int end)
+			   int start,int end, double *p = NULL)
 {
   int n = end - start + 1;
   double aver = 0,s = 0, over_n = 1./n;
@@ -300,8 +300,10 @@ double HisMaker::getEValue(double mean,double sigma,double *rd,
   double ret = cum->Eval(x);
   
   if (x > 0) ret = 1 - ret;
+  if (p != NULL) {
+      *p = 1-TMath::Power(1-ret, GENOME_SIZE_NORMAL*inv_bin_size*getInverse(end - start + 1));
+  }
   ret *= GENOME_SIZE_NORMAL*inv_bin_size*getInverse(end - start + 1);
-  
   return ret;
 }
 
@@ -784,7 +786,7 @@ bool HisMaker::adjustToEValue(double mean,double sigma,double *rd,int n_bins,
 }
 
 double HisMaker::gaussianEValue(double mean,double sigma,double *rd,
-				int start,int end)
+                                int start,int end, double *pret = NULL)
 {
   // Calculate by deviation from gaussian
   double max = 0,min = 1e+10,av = 0;
@@ -805,6 +807,9 @@ double HisMaker::gaussianEValue(double mean,double sigma,double *rd,
     double x = (min - mean)/sigma*0.707;
     p = 0.5*(1 - TMath::Erf(x));
   }
+    if (pret != NULL) {
+        *pret = 1 - TMath::Power(1 - p, GENOME_SIZE_NORMAL*inv_bin_size*getInverse(n));
+    }
   return GENOME_SIZE_NORMAL*TMath::Power(p,n);
 }
 
@@ -1015,7 +1020,8 @@ void HisMaker::callSVs(string *user_chroms,int n_chroms,
       int start  = bs*bin_size + 1;
       int end    = (be + 1)*bin_size;
       double size = end - start + 1;
-      double e  = getEValue(mean,sigma,rd,bs,be);
+      double p = 0;
+      double e  = getEValue(mean,sigma,rd,bs,be,&p);
       double e2 = gaussianEValue(mean,sigma,rd,bs,be);
       double e3 = 1,e4 = 1;
       int add = int(1000./bin_size + 0.5);
@@ -1032,7 +1038,7 @@ void HisMaker::callSVs(string *user_chroms,int n_chroms,
       if (n_reads_all > 0) q0 = (n_reads_all - n_reads_unique)/n_reads_all;
       cout<<type<<"\t"<<chrom<<":"<<start<<"-"<<end<<"\t"
 	  <<size<<"\t"<<cnv<<"\t"<<e<<"\t"<<e2<<"\t"
-	  <<e3<<"\t"<<e4<<"\t"<<q0<<endl;
+	  <<e3<<"\t"<<e4<<"\t"<<q0<<"\t"<<p<<endl;
     }
     delete[] rd;
     delete[] level;

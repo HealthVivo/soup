@@ -269,6 +269,37 @@ def run_tree(bam_fn, genome):
 # end of run tree
 
 
+# make a bedgraph file
+def mk_graph_file(out_fn):
+	bedgraph_fn = out_fn + ".bedgraph"
+	f = open(out_fn, 'r')
+	fdata = f.readlines()
+	f.close()
+	
+	nf = []
+	prev_chr = ""
+	prev_end = 0
+	for x in fdata:
+  		pieces = x.split()
+  		idx = pieces[1].find(':')
+  		idx2 = pieces[1].find('-')
+  		chr = pieces[1][0:idx]
+  		start = int(pieces[1][idx+1:idx2])
+  		end = int(pieces[1][idx2+1:])
+  		if chr == prev_chr and start-prev_end>1:
+  			line = "%s\t%d\t%d\t%f" % (prev_chr, prev_end+1, start-1, 1.000)
+  			nf.append(line)
+  		prev_chr, prev_end = chr, end
+  		line = "%s\t%d\t%d\t%s" % (chr, start, end, pieces[3])
+  		nf.append(line)
+	nfstr = '\n'.join(nf)
+	
+	f = open(bedgraph_fn, 'w')
+	f.write(nfstr)
+	f.close()
+# end of make bedgraph file
+
+
 # main
 if __name__ == "__main__":
 	# usage: ./cnvnator.py {window size} {BAM file} {output variant file name} {path to chromosome files}
@@ -297,6 +328,7 @@ if __name__ == "__main__":
 	# run calls
 	if run_calls(sys.argv[1], hist_fn, sys.argv[3]) != 0:
 		sys.exit(1)
+	mk_graph_file(sys.argv[3])
 	sys.exit(0)
 # end of main
 

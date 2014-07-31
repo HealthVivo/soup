@@ -191,7 +191,7 @@ private:
   double testRegion(double value,double m,double s,int n);
   double testTwoRegions(double m1,double s1,int n1,double m2,double s2,int n2,
 			double scale);
-  double getEValue(double mean,double sigma,double *rd,int start,int end);
+  double getEValue(double mean,double sigma,double *rd,int start,int end, double *p);
   bool sameLevel(double l1, double l2);
   bool getRegionLeft(double *level,int n_bins,int bin,int &start,int &stop);
   bool getRegionRight(double *level,int n_bins,int bin,int &start,int &stop);
@@ -199,7 +199,7 @@ private:
   bool adjustToEValue(double mean,double sigma,double *rd,int n_bins,
 		      int &start,int &end,double eval);
   int countGCpercentage(char *seq,int low,int up);
-  double gaussianEValue(double mean,double sigma,double *rd,int start,int end);
+  double gaussianEValue(double mean,double sigma,double *rd,int start,int end, double *p);
   int getChromNamesWithHis(string *names,bool useATcorr,bool useGCcorr);
   int getChromNamesWithTree(string *names,string rfn = "");
   int getChromLenWithTree(string name,string rfn = "");
