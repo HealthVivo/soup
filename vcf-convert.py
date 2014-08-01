@@ -172,7 +172,10 @@ def cnvnator2vcf(cnv_fn, fasta_fn):
 			end = int(pieces[1][idx2+1:])
 			log2cn = math.log(float(pieces[3]), 2)
 			pval = float(pieces[9])
-			phred = -10*math.log(pval, 10) if pval != 1 else pval
+			if pval == 0:
+				phred = 1000 # some nominal big number
+			else:
+				phred = -10*math.log(pval, 10) if pval != 1 else pval
 		except Exception, ex:
 			continue
 		svs.append(SV(chrom, start, end, log2cn, phred))
