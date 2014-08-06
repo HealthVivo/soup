@@ -110,7 +110,8 @@ int after_partition_copy(TString fname_in  = "chr22.root",
 
 BEFORE_PART_FN = "before_partition_copy.cpp"
 AFTER_PART_FN = "after_partition_copy.cpp"
-MAX_PROCS = 128
+MAX_MAX_PROCS = 48
+MAX_PROCS = 32
 ROOT_EXT = ".root"
 HIST_EXT = ".hist"
 CNVNATOR = "cnvnator"
@@ -262,7 +263,7 @@ def run_calls(bin_size, hist_fn, out_fn):
 # run tree
 def run_tree(bam_fn, genome):
 	print "===== Running tree on input data"
-	ret = subprocess.call([CNVNATOR, '-root', get_root_fn(bam_fn), '-genome', genome, '-ptree', bam_fn, '-unique'])
+	ret = subprocess.call([CNVNATOR, '-root', get_root_fn(bam_fn), '-genome', genome, '-ptree', bam_fn, '-unique', '-nthreads', str(MAX_PROCS)])
 	if ret != 0:
 		print "Error in tree creation"
 	return ret
@@ -303,15 +304,24 @@ def mk_graph_file(out_fn):
 # main
 if __name__ == "__main__":
 	# usage: ./cnvnator.py {window size} {BAM file} {output variant file name} {path to chromosome files}
-	if len(sys.argv) != 6:
-		print "Usage: ./cnvator.py {window size} {BAM file name} {output variant file name} {path to chromosome files} {genome}"
+	if len(sys.argv) != 7:
+		print "Usage: ./cnvator.py {window size} {BAM file name} {output variant file name} {path to chromosome files} {genome} {nthreads}"
 		sys.exit(1)
+	
+	try:
+		MAX_PROCS = int(sys.argv[6])
+		if MAX_PROCS <= 0 or MAX_PROCS > MAX_MAX_PROCS:
+			raise Exception()	
+	except:
+		print "Number of threads must be a number between 1 and %d." % MAX_MAX_PROCS
+		sys.exit(1)
+	
 	chroms_list = get_chroms_list(sys.argv[2])
 	if len(chroms_list) == 0:
 		print "No chromosomes found in BAM file."
 		sys.exit(1)
 	print "Processing data from the following chromosomes: %s" % str(chroms_list)
-
+	
 	# run tree
 	if run_tree(sys.argv[2], sys.argv[5]) != 0:
 		sys.exit(1)

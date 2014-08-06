@@ -7,6 +7,8 @@ using namespace std;
 #include "AliParser.hh"
 #include "HisMaker.hh"
 #include "TreeBuilder.hh"
+#define DEFAULT_MAX_THREADS 24
+#define MAX_MAX_THREADS 48
 
 int main(int argc,char *argv[])
 {
@@ -20,7 +22,7 @@ int main(int argc,char *argv[])
   usage += argv[0];
   usage += " -root out.root  [-genome name] [-chrom 1 2 ...] -tree  file1.bam ...\n";
   usage += argv[0];
-  usage += " -root out.root  [-genome name] [-chrom 1 2 ...] -ptree  file1.bam ...\n";
+  usage += " -root out.root  [-genome name] [-chrom 1 2 ...] [-nthreads threads] -ptree  file1.bam ...\n";
   usage += argv[0];
   usage += " -root out.root  [-genome name] [-chrom 1 2 ...] -merge file1.root ...\n";
   usage += argv[0];
@@ -62,6 +64,7 @@ int main(int argc,char *argv[])
   static const int OPT_EVAL       = 0x200;
   static const int OPT_PE         = 0x400;
   static const int OPT_PTREE      = 0x800; // parallelized tree
+  static const int OPT_NTHREADS   = 0x1000; // # of threads; useful with ptree
 
   static const int OPT_SPARTITION = 0x1000;
   static const int OPT_HIS_NEW    = 0x2000;
@@ -69,7 +72,7 @@ int main(int argc,char *argv[])
     
 
   // tree, merge, his, stat, partition, spartition, call, view, genotype
-    int max_opts = 10000, n_opts = 0;
+    int max_opts = 10000, n_opts = 0, max_threads = DEFAULT_MAX_THREADS;
     int opts[max_opts];
     int bins[max_opts];
     int gbin = 0;
@@ -192,6 +195,13 @@ int main(int argc,char *argv[])
       range = atoi(argv[index++]);
     } else if (option == "-relax") {
       relaxCalling = true;
+    } else if (option == "-nthreads") {
+        max_threads = atoi(argv[index++]);
+        if (max_threads <= 0 || max_threads > MAX_MAX_THREADS) {
+            cerr<<"Number of threads must be between 1 and "<<MAX_MAX_THREADS<<"."<<endl;
+            cerr<<usage<<endl;
+            return 0;
+        }
     } else if (option[0] == '-') {
       cerr<<"Unknown option '"<<option<<"'.\n"<<endl;
     }
@@ -205,7 +215,7 @@ int main(int argc,char *argv[])
     int option = opts[o];
     int bin = bins[o]; if (bin <= 0) bin = gbin;
     if (option == OPT_PTREE) { // tree
-        TreeBuilder builder(genome, out_root_file, 32, forUnique);
+        TreeBuilder builder(genome, out_root_file, max_threads, forUnique);
         for (int idx = 0; idx < n_files; idx++) {
             builder.build(chroms, n_chroms, data_files[idx]);
         }
