@@ -271,6 +271,8 @@ def mk_graph_file(out_fn):
   		idx = pieces[1].find(':')
   		idx2 = pieces[1].find('-')
   		chr = pieces[1][0:idx]
+		# remove any 'chr' prefixes from the chrom name
+		if chr.startswith('chr'): chr = chr[3:]
   		start = int(pieces[1][idx+1:idx2])
   		end = int(pieces[1][idx2+1:])
   		if chr == prev_chr and start-prev_end>1:
@@ -309,9 +311,9 @@ if __name__ == "__main__":
 	print "Processing data from the following chromosomes: %s" % str(chroms_list)
 	
 	# run tree
-	#if run_tree(sys.argv[2], sys.argv[5]) != 0:
-	#	sys.exit(1)
-        #
+	if run_tree(sys.argv[2], sys.argv[5]) != 0:
+		sys.exit(1)
+        
 	# run hist and stats
 	if run_hist_stats(sys.argv[1], sys.argv[2], sys.argv[4]) != 0:
 		sys.exit(1)
