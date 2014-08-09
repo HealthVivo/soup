@@ -230,21 +230,7 @@ def run_hist_stats(bin_size, bam_fn, chroms_dir):
 	if ret != 0:
 		print "Error computing histograms (input bin size)."
 		return ret
-	# no need to duplicate hist and stat if the input bin size was 1000
-	if bin_size == "1000":
-		return 0
-	
-	#print "===== Running histograms on input data for bin size 1000"
-	ret = subprocess.call([CNVNATOR, '-his', '1000', '-d', chroms_dir, '-root', root_fn, '-outroot', hist_fn]) 
-	if ret != 0:
-		print "Error computing histograms (bin size 1000)."
-		return ret
-	#print "===== Running stats on input data for bin size 1000"
-	ret = subprocess.call([CNVNATOR, '-stat', '1000', '-root', hist_fn]) 
-	if ret != 0:
-		print "Error computing stats (bin size 1000)."
-		return ret
-	return 0
+        return 0
 # end of run tree, hist, stats
 
 
@@ -323,9 +309,9 @@ if __name__ == "__main__":
 	print "Processing data from the following chromosomes: %s" % str(chroms_list)
 	
 	# run tree
-	if run_tree(sys.argv[2], sys.argv[5]) != 0:
-		sys.exit(1)
-
+	#if run_tree(sys.argv[2], sys.argv[5]) != 0:
+	#	sys.exit(1)
+        #
 	# run hist and stats
 	if run_hist_stats(sys.argv[1], sys.argv[2], sys.argv[4]) != 0:
 		sys.exit(1)
