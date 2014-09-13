@@ -48,7 +48,7 @@ struct nlist { /* table entry: */
   bam1_t *defn; /* replacement test */
 };
 
-#define HASHSIZE 1000001
+#define HASHSIZE 1000
   static struct nlist *hashtab[HASHSIZE]; /* pointer table */
 
 /* hash: form hash value for string s */
@@ -90,7 +90,8 @@ int print_fastq(bam1_t *bamrec, char read) {
   int notPrimary = bamrec->core.flag & 256;
   int revStrand = bamrec->core.flag & 16;
   int i;
-  cout << "@" << bam1_qname(bamrec) << '/' << read << " RG:Z:" << bam_aux_get(bamrec, "RG") << endl;
+  uint8_t *readgroup = bam_aux_get(bamrec, "RG");
+  cout << "@" << bam1_qname(bamrec) << '/' << read << " RG:Z:" << readgroup+1 << endl; // +1 omits the first character (Z) indicating string
   if (!revStrand) { // forward strand
     for (i = 0; i < bamrec->core.l_qseq; ++i) {
       cout << bam_nt16_rev_table[bam1_seqi(bam1_seq(bamrec),i)] ;
@@ -158,6 +159,9 @@ Usage: " << argv[0] << " [bamFile]\n" << endl;
 	print_fastq(mate->defn, '1');
 	print_fastq(bamrec, '2');
       }
+
+      // maybe this will free memory?
+      // install(bam1_qname(bamrec), bamrec);
 
     }
   }
