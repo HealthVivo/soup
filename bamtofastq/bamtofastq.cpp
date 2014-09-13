@@ -46,170 +46,107 @@ int min (int a, int b) {
   else { return b; }
 }
 
-int main( int argc, char *argv[] )
-{
-  if ( argc != 3 ) /* argc should be 2 for correct execution */
-    {
-      cout << "\nProgram: bamtofastq\n\
+int main( int argc, char *argv[] ) {
+  // argc should be 2 for correct execution
+  if ( argc != 2 ) {
+    cout << "\n\
+Program: bamtofastq\n\
 Version: 0.0.1\n\
 Authors: Ira Hall <ihall@genome.wustl.edu> and Colby Chiang <cc2qe@virginia.edu>\n\
-Description: Convert a coordinate sorted BAM file\n\
-  to FASTQ, while preserving read group\n\
-  information as a comment" << endl;
-      cout << "\n  usage: " << argv[0] << " [clipTo] [bamFile]\n" << endl;
-    }
+Description: Convert a coordinate sorted BAM file to FASTQ, while preserving\n\
+    read group information as a comment" << endl;
+    cout << "\n\
+Usage: " << argv[0] << " [bamFile]\n" << endl;
+  }
   
-  else
-    {
-      bam1_t *bamrec = bam_init1();
-      samfile_t *samfile;
-      if ( (samfile = samopen(argv[2], "rb", NULL)) == 0) {
-	cout << "error: could not open bam file" << endl;
-	return 1;
-      }
-      
-      // open output stream
-      samfile_t *fpBothMapped;
-      fpBothMapped = samopen("bothMapped.bam", "wb", samfile->header);
-      
-      ofstream fq1;
-      fq1.open("1_ex.fq");
-      
-      ofstream fq2;
-      fq2.open("2_ex.fq");
-      
-      int flag;
-      int maxBases = atoi(argv[1]);
-      
-      while (samread(samfile, bamrec) > 0) {
-	flag = bamrec->core.flag;
-	// cout << flag << endl;
-	bool secondRead;
-	if (flag % 256 < 128) {
-	  notPrimary = false;
-	}
-	else {
-	  notPrimary = true;
-	}
-	
-	bool revStrand;
-	if (flag % 32 < 16) {
-	  revStrand = false;
-	}
-	else {
-	  revStrand = true;
-	}
-	
-	bool isAligned;
-	if (flag % 8 < 4) {
-	  isAligned = true;
-	}
-	else {
-	  isAligned = false;
-	}
-	
-	bool mateAligned;
-	if (flag % 16 < 8) {
-	  mateAligned = true;
-	}
-	else {
-	  mateAligned = false;
-	}
-	
-	bool isProper;
-	if (flag % 4 < 2) {
-	  isProper = false;
-	}
-	else {
-	  isProper = true;
-	}
-	
-	if (isAligned && mateAligned) {
-	  samwrite(fpBothMapped, bamrec);
-	}
-	
-	else {
-	  if (!notPrimary)
-	    {
-	      fq1 << "@" << bam1_qname(bamrec) << endl;
-	      
-	      int clipTo;
-	      if ( ! isAligned ) {
-		clipTo = min(bamrec->core.l_qseq, maxBases);
-	      }
-	      else { clipTo = bamrec->core.l_qseq; }
-	      
-	      if (!revStrand) {
-		
-		int i;
-		for (i = 0; i < clipTo; ++i) {
-		  fq1 << bam_nt16_rev_table[bam1_seqi(bam1_seq(bamrec),i)] ;
-		}
-		fq1 << "\n+" << endl;
-		
-		for (i = 0; i < clipTo; ++i) {
-		  fq1 << (char) (bam1_qual(bamrec)[i] + 33) ;
-		}
-		fq1 << endl;
-	      }
-	      
-	      else {
-		int i;
-		for (i = clipTo - 1; i >= 0 ; --i) {
-		  fq1 << compBase(bam_nt16_rev_table[bam1_seqi(bam1_seq(bamrec),i)]) ;
-		}
-		fq1 << "\n+" << endl;
-		
-		for (i = clipTo - 1; i >= 0; --i) {
-		  fq1 << (char) (bam1_qual(bamrec)[i] + 33) ;
-		}
-		fq1 << endl;
-	      }
-	    }
-	  
-	  else if (notPrimary)
-	    {
-	      fq2 << "@" << bam1_qname(bamrec) << endl;
-	      int clipTo;
-	      if ( ! isAligned ) {
-		clipTo = min(bamrec->core.l_qseq, maxBases);
-	      }
-	      else { clipTo = bamrec->core.l_qseq; }
-	      
-	      if (!revStrand) {
-		
-		int i;
-		for (i = 0; i < clipTo; ++i) {
-		  fq2 << bam_nt16_rev_table[bam1_seqi(bam1_seq(bamrec),i)] ;
-		}
-		fq2 << "\n+" << endl;
-		
-		for (i = 0; i < clipTo; ++i) {
-		  fq2 << (char) (bam1_qual(bamrec)[i] + 33) ;
-		}
-		fq2 << endl;
-	      }
-	      
-	      else {
-		int i;
-		for (i = clipTo - 1; i >= 0 ; --i) {
-		  fq2 << compBase(bam_nt16_rev_table[bam1_seqi(bam1_seq(bamrec),i)]) ;
-		}
-		fq2 << "\n+" << endl;
-		
-		for (i = clipTo - 1; i >= 0; --i) {
-		  fq2 << (char) (bam1_qual(bamrec)[i] + 33) ;
-		}
-		fq2 << endl;
-	      }
-	    }
-	}
-      }
-      samclose(fpBothMapped);
-      
-      fq1.close();
-      fq2.close();
+  else {
+    bam1_t *bamrec = bam_init1();
+    samfile_t *samfile;
+    if ( (samfile = samopen(argv[1], "rb", NULL)) == 0) {
+      cout << "error: could not open bam file" << endl;
+      return 1;
     }
+    
+    // open output streams
+    ofstream fq1;
+    fq1.open("1_ex.fq");
+    
+    ofstream fq2;
+    fq2.open("2_ex.fq");
+    
+    int flag;
+
+    while (samread(samfile, bamrec) > 0) {
+      flag = bamrec->core.flag;
+      // fprintf(stderr, "flag: %d", flag);
+
+      int notPrimary = flag & 256;
+      int firstInPair = flag & 64;
+      int revStrand = flag & 16;
+      
+      if (! notPrimary) {
+	if (firstInPair) {
+	  fq1 << "@" << bam1_qname(bamrec) << endl;
+
+	  if (!revStrand) {
+	    int i;
+	    for (i = 0; i < bamrec->core.l_qseq; ++i) {
+	      fq1 << bam_nt16_rev_table[bam1_seqi(bam1_seq(bamrec),i)] ;
+	    }
+	    fq1 << "\n+" << endl;
+
+	    for (i = 0; i < bamrec->core.l_qseq; ++i) {
+	      fq1 << (char) (bam1_qual(bamrec)[i] + 33) ;
+	    }
+	    fq1 << endl;
+	  }
+
+	  else {
+	    int i;
+	    for (i = bamrec->core.l_qseq - 1; i >= 0 ; --i) {
+	      fq1 << compBase(bam_nt16_rev_table[bam1_seqi(bam1_seq(bamrec),i)]) ;
+	    }
+	    fq1 << "\n+" << endl;
+
+	    for (i = bamrec->core.l_qseq - 1; i >= 0; --i) {
+	      fq1 << (char) (bam1_qual(bamrec)[i] + 33) ;
+	    }
+	    fq1 << endl;
+	  }
+	}
+	else { // not first in pair
+	  fq2 << "@" << bam1_qname(bamrec) << endl;
+	  if (!revStrand) {
+	    int i;
+	    for (i = 0; i < bamrec->core.l_qseq; ++i) {
+	      fq2 << bam_nt16_rev_table[bam1_seqi(bam1_seq(bamrec),i)] ;
+	    }
+	    fq2 << "\n+" << endl;
+
+	    for (i = 0; i < bamrec->core.l_qseq; ++i) {
+	      fq2 << (char) (bam1_qual(bamrec)[i] + 33) ;
+	    }
+	    fq2 << endl;
+	  }
+
+	  else {
+	    int i;
+	    for (i = bamrec->core.l_qseq - 1; i >= 0 ; --i) {
+	      fq2 << compBase(bam_nt16_rev_table[bam1_seqi(bam1_seq(bamrec),i)]) ;
+	    }
+	    fq2 << "\n+" << endl;
+
+	    for (i = bamrec->core.l_qseq - 1; i >= 0; --i) {
+	      fq2 << (char) (bam1_qual(bamrec)[i] + 33) ;
+	    }
+	    fq2 << endl;
+	  }
+	}
+      }
+    }
+    fq1.close();
+    fq2.close();
+  }
   return 0;
 }
 
