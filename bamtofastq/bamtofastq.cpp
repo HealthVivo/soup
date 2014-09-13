@@ -67,85 +67,71 @@ Usage: " << argv[0] << " [bamFile]\n" << endl;
       return 1;
     }
     
-    // open output streams
-    ofstream fq1;
-    fq1.open("1_ex.fq");
-    
-    ofstream fq2;
-    fq2.open("2_ex.fq");
-    
-    int flag;
+    int flag, notPrimary, firstInPair, revStrand, i;
 
     while (samread(samfile, bamrec) > 0) {
       flag = bamrec->core.flag;
       // fprintf(stderr, "flag: %d", flag);
 
-      int notPrimary = flag & 256;
-      int firstInPair = flag & 64;
-      int revStrand = flag & 16;
-      
+      notPrimary = flag & 256;
+      firstInPair = flag & 64;
+      revStrand = flag & 16;
+
       if (! notPrimary) {
 	if (firstInPair) {
-	  fq1 << "@" << bam1_qname(bamrec) << endl;
-
+	  cout << "@" << bam1_qname(bamrec) << " RG:Z:" << bam_aux_get(bamrec, "RG") << endl;
 	  if (!revStrand) {
-	    int i;
 	    for (i = 0; i < bamrec->core.l_qseq; ++i) {
-	      fq1 << bam_nt16_rev_table[bam1_seqi(bam1_seq(bamrec),i)] ;
+	      cout << bam_nt16_rev_table[bam1_seqi(bam1_seq(bamrec),i)] ;
 	    }
-	    fq1 << "\n+" << endl;
+	    cout << "\n+" << endl;
 
 	    for (i = 0; i < bamrec->core.l_qseq; ++i) {
-	      fq1 << (char) (bam1_qual(bamrec)[i] + 33) ;
+	      cout << (char) (bam1_qual(bamrec)[i] + 33) ;
 	    }
-	    fq1 << endl;
+	    cout << endl;
 	  }
 
 	  else {
-	    int i;
 	    for (i = bamrec->core.l_qseq - 1; i >= 0 ; --i) {
-	      fq1 << compBase(bam_nt16_rev_table[bam1_seqi(bam1_seq(bamrec),i)]) ;
+	      cout << compBase(bam_nt16_rev_table[bam1_seqi(bam1_seq(bamrec),i)]) ;
 	    }
-	    fq1 << "\n+" << endl;
+	    cout << "\n+" << endl;
 
 	    for (i = bamrec->core.l_qseq - 1; i >= 0; --i) {
-	      fq1 << (char) (bam1_qual(bamrec)[i] + 33) ;
+	      cout << (char) (bam1_qual(bamrec)[i] + 33) ;
 	    }
-	    fq1 << endl;
+	    cout << endl;
 	  }
 	}
 	else { // not first in pair
-	  fq2 << "@" << bam1_qname(bamrec) << endl;
+	  cout << "@" << bam1_qname(bamrec) << " RG:Z:" << bam_aux_get(bamrec, "RG") << endl;
 	  if (!revStrand) {
-	    int i;
 	    for (i = 0; i < bamrec->core.l_qseq; ++i) {
-	      fq2 << bam_nt16_rev_table[bam1_seqi(bam1_seq(bamrec),i)] ;
+	      cout << bam_nt16_rev_table[bam1_seqi(bam1_seq(bamrec),i)] ;
 	    }
-	    fq2 << "\n+" << endl;
+	    cout << "\n+" << endl;
 
 	    for (i = 0; i < bamrec->core.l_qseq; ++i) {
-	      fq2 << (char) (bam1_qual(bamrec)[i] + 33) ;
+	      cout << (char) (bam1_qual(bamrec)[i] + 33) ;
 	    }
-	    fq2 << endl;
+	    cout << endl;
 	  }
 
 	  else {
-	    int i;
 	    for (i = bamrec->core.l_qseq - 1; i >= 0 ; --i) {
-	      fq2 << compBase(bam_nt16_rev_table[bam1_seqi(bam1_seq(bamrec),i)]) ;
+	      cout << compBase(bam_nt16_rev_table[bam1_seqi(bam1_seq(bamrec),i)]) ;
 	    }
-	    fq2 << "\n+" << endl;
+	    cout << "\n+" << endl;
 
 	    for (i = bamrec->core.l_qseq - 1; i >= 0; --i) {
-	      fq2 << (char) (bam1_qual(bamrec)[i] + 33) ;
+	      cout << (char) (bam1_qual(bamrec)[i] + 33) ;
 	    }
-	    fq2 << endl;
+	    cout << endl;
 	  }
 	}
       }
     }
-    fq1.close();
-    fq2.close();
   }
   return 0;
 }
