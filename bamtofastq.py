@@ -33,8 +33,8 @@ def bamtofastq(bamfile):
                 if tag=="RG": RG2=value
             # RG:Z:ID
             if al.is_read1:
-                printfastq_rg(d[key],1,RG1)
-                printfastq_rg(al,2,RG2)
+                printfastq_rg(al,1,RG2)
+                printfastq_rg(d[key],2,RG1)
             else:
                 printfastq_rg(d[key],1,RG1)
                 printfastq_rg(al,2,RG2)
