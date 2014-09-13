@@ -41,12 +41,6 @@ char compBase (char base) {
   }
 }
 
-int min (int a, int b) {
-  if (a < b) { return a; }
-  else { return b; }
-}
-
-
 // Dictionary from http://stackoverflow.com/a/4384446
 struct nlist { /* table entry: */
   struct nlist *next; /* next entry in the chain */
@@ -74,7 +68,6 @@ struct nlist *lookup(char *s) {
   return NULL; /* not found */
 }
 
-bam1_t *bamrec_dup(bam1_t *);
 /* install: put (name, defn) in hashtab */
 struct nlist *install(char *name, bam1_t *defn) {
   struct nlist *np;
@@ -88,17 +81,39 @@ struct nlist *install(char *name, bam1_t *defn) {
     hashtab[hashval] = np;
   } else /* already there */
     free((void *) np->defn); /* free previous defn */
-  if ((np->defn = bamrec_dup(defn)) == NULL)
+  if ((np->defn = bam_dup1(defn)) == NULL)
     return NULL;
   return np;
 }
 
-bam1_t *bamrec_dup(bam1_t *b) { /* make a duplicate of b */
-  bam1_t *p;
-  p = (bam1_t *) malloc(sizeof(bam1_t)); /* +1 for '\0' */
-  if (p != NULL)
-    p = b;
-  return p;
+int print_fastq(bam1_t *bamrec, char read) {
+  int notPrimary = bamrec->core.flag & 256;
+  int revStrand = bamrec->core.flag & 16;
+  int i;
+  cout << "@" << bam1_qname(bamrec) << '/' << read << " RG:Z:" << bam_aux_get(bamrec, "RG") << endl;
+  if (!revStrand) { // forward strand
+    for (i = 0; i < bamrec->core.l_qseq; ++i) {
+      cout << bam_nt16_rev_table[bam1_seqi(bam1_seq(bamrec),i)] ;
+    }
+    cout << "\n+" << endl;
+    
+    for (i = 0; i < bamrec->core.l_qseq; ++i) {
+      cout << (char) (bam1_qual(bamrec)[i] + 33) ;
+    }
+    cout << endl;
+  }
+  else { // reverse strand
+    for (i = bamrec->core.l_qseq - 1; i >= 0 ; --i) {
+      cout << compBase(bam_nt16_rev_table[bam1_seqi(bam1_seq(bamrec),i)]) ;
+    }
+    cout << "\n+" << endl;
+	  
+    for (i = bamrec->core.l_qseq - 1; i >= 0; --i) {
+      cout << (char) (bam1_qual(bamrec)[i] + 33) ;
+    }
+    cout << endl;
+  }
+  return 0;
 }
 
 int main( int argc, char *argv[] ) {
@@ -122,79 +137,28 @@ Usage: " << argv[0] << " [bamFile]\n" << endl;
       return 1;
     }
 
-
     int flag, notPrimary, firstInPair, revStrand, i;
-    int j = 0;
     while (samread(samfile, bamrec) > 0) {
-      flag = bamrec->core.flag;
-      // fprintf(stderr, "flag: %d", flag);
+      if (notPrimary) continue; // skip secondary alignments
 
-      notPrimary = flag & 256;
-      firstInPair = flag & 64;
-      revStrand = flag & 16;
-
-      if (! notPrimary) {
-	// install("bam1_qname(bamrec)", 'string');
-
-	install(bam1_qname(bamrec), bamrec);
-	// cout << lookup("hello")->defn << endl;
-	j += 1;
-
-	cout << lookup("D2D6HACXX130815:4:2309:17632:73110")->defn->core.l_qseq << endl;
-
-	if (firstInPair) {
-	  cout << "@" << bam1_qname(bamrec) << " RG:Z:" << bam_aux_get(bamrec, "RG") << endl;
-	  if (!revStrand) {
-	    for (i = 0; i < bamrec->core.l_qseq; ++i) {
-	      cout << bam_nt16_rev_table[bam1_seqi(bam1_seq(bamrec),i)] ;
-	    }
-	    cout << "\n+" << endl;
-
-	    for (i = 0; i < bamrec->core.l_qseq; ++i) {
-	      cout << (char) (bam1_qual(bamrec)[i] + 33) ;
-	    }
-	    cout << endl;
-	  }
-
-	  else {
-	    for (i = bamrec->core.l_qseq - 1; i >= 0 ; --i) {
-	      cout << compBase(bam_nt16_rev_table[bam1_seqi(bam1_seq(bamrec),i)]) ;
-	    }
-	    cout << "\n+" << endl;
-
-	    for (i = bamrec->core.l_qseq - 1; i >= 0; --i) {
-	      cout << (char) (bam1_qual(bamrec)[i] + 33) ;
-	    }
-	    cout << endl;
-	  }
-	}
-	else { // not first in pair
-	  cout << "@" << bam1_qname(bamrec) << " RG:Z:" << bam_aux_get(bamrec, "RG") << endl;
-	  if (!revStrand) {
-	    for (i = 0; i < bamrec->core.l_qseq; ++i) {
-	      cout << bam_nt16_rev_table[bam1_seqi(bam1_seq(bamrec),i)] ;
-	    }
-	    cout << "\n+" << endl;
-
-	    for (i = 0; i < bamrec->core.l_qseq; ++i) {
-	      cout << (char) (bam1_qual(bamrec)[i] + 33) ;
-	    }
-	    cout << endl;
-	  }
-
-	  else {
-	    for (i = bamrec->core.l_qseq - 1; i >= 0 ; --i) {
-	      cout << compBase(bam_nt16_rev_table[bam1_seqi(bam1_seq(bamrec),i)]) ;
-	    }
-	    cout << "\n+" << endl;
-
-	    for (i = bamrec->core.l_qseq - 1; i >= 0; --i) {
-	      cout << (char) (bam1_qual(bamrec)[i] + 33) ;
-	    }
-	    cout << endl;
-	  }
-	}
+      // add to hash table if mate already there
+      nlist *mate = lookup(bam1_qname(bamrec));
+      if (! mate) {
+      	install(bam1_qname(bamrec), bamrec);
+      	continue;
       }
+
+      // print the FASTQ for matched pairs
+      int firstInPair = bamrec->core.flag & 64;
+      if (firstInPair) {
+	print_fastq(bamrec, '1');
+	print_fastq(mate->defn, '2');
+      }
+      else {
+	print_fastq(mate->defn, '1');
+	print_fastq(bamrec, '2');
+      }
+
     }
   }
   return 0;
