@@ -51,10 +51,10 @@ int min (int a, int b) {
 struct nlist { /* table entry: */
   struct nlist *next; /* next entry in the chain */
   char *name; /* defined name */
-  char *defn; /* replacement test */
+  bam1_t *defn; /* replacement test */
 };
 
-#define HASHSIZE 101
+#define HASHSIZE 1000001
   static struct nlist *hashtab[HASHSIZE]; /* pointer table */
 
 /* hash: form hash value for string s */
@@ -74,9 +74,9 @@ struct nlist *lookup(char *s) {
   return NULL; /* not found */
 }
 
-char *strdup(char *);
+bam1_t *bamrec_dup(bam1_t *);
 /* install: put (name, defn) in hashtab */
-struct nlist *install(char *name, char *defn) {
+struct nlist *install(char *name, bam1_t *defn) {
   struct nlist *np;
   unsigned hashval;
   if ((np = lookup(name)) == NULL) { /* not found */
@@ -88,16 +88,16 @@ struct nlist *install(char *name, char *defn) {
     hashtab[hashval] = np;
   } else /* already there */
     free((void *) np->defn); /* free previous defn */
-  if ((np->defn = strdup(defn)) == NULL)
+  if ((np->defn = bamrec_dup(defn)) == NULL)
     return NULL;
   return np;
 }
 
-char *strdup(char *s) { /* make a duplicate of s */
-  char *p;
-  p = (char *) malloc(strlen(s)+1); /* +1 for '\0' */
+bam1_t *bamrec_dup(bam1_t *b) { /* make a duplicate of b */
+  bam1_t *p;
+  p = (bam1_t *) malloc(sizeof(bam1_t)); /* +1 for '\0' */
   if (p != NULL)
-    strcpy(p, s);
+    p = b;
   return p;
 }
 
@@ -122,11 +122,9 @@ Usage: " << argv[0] << " [bamFile]\n" << endl;
       return 1;
     }
 
-    install("hello", "goodbye");
-    cout << lookup("hello")->defn << endl;
 
     int flag, notPrimary, firstInPair, revStrand, i;
-
+    int j = 0;
     while (samread(samfile, bamrec) > 0) {
       flag = bamrec->core.flag;
       // fprintf(stderr, "flag: %d", flag);
@@ -136,6 +134,14 @@ Usage: " << argv[0] << " [bamFile]\n" << endl;
       revStrand = flag & 16;
 
       if (! notPrimary) {
+	// install("bam1_qname(bamrec)", 'string');
+
+	install(bam1_qname(bamrec), bamrec);
+	// cout << lookup("hello")->defn << endl;
+	j += 1;
+
+	cout << lookup("D2D6HACXX130815:4:2309:17632:73110")->defn->core.l_qseq << endl;
+
 	if (firstInPair) {
 	  cout << "@" << bam1_qname(bamrec) << " RG:Z:" << bam_aux_get(bamrec, "RG") << endl;
 	  if (!revStrand) {
