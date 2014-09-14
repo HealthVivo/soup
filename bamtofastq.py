@@ -6,31 +6,42 @@
 
 import pysam
 import sys
-import getopt
+import argparse
+from argparse import RawTextHelpFormatter
 import string
 from string import *
-from optparse import OptionParser
 
+__author__ = "Ira Hall (ihall@genome.wustl.edu) and Colby Chiang (cc2qe@virginia.edu)"
+__version__ = "$Revision: 0.0.1 $"
+__date__ = "$Date: 2014-09-04 14:31 $"
 
-def bamtofastq(bamfile):
-# get file and header
-#   bam = pysam.Samfile(bamfile, "rb")
+def bamtofastq(bamfile, is_sam, readgroup):
+    # get file and header
     if bamfile == "stdin": 
-        bam = pysam.Samfile("-", "r")
+        if is_sam:
+            bam = pysam.Samfile("-", "r")
+        else:
+            bam = pysam.Samfile('-', 'rb')
     else:
-        bam = pysam.Samfile(bamfile, "rb")
-    num = 0
+        if is_sam:
+            bam = pysam.Samfile(bamfile, 'r')
+        else:
+            bam = pysam.Samfile(bamfile, "rb")
+    # parse readgroup string
+    try:
+        rg_list = readgroup.split(',')
+    except AttributeError:
+        rg_list = None
+
     d = {}
     for al in bam.fetch():
-        if al.is_secondary: continue
+        if al.is_secondary or (rg_list and al.opt('RG') not in rg_list): continue
         key = al.qname
         if key not in d:
             d.setdefault(key,al)
         else:
-            for tag, value in d[key].tags:
-                if tag=="RG": RG1=value
-            for tag, value in al.tags:
-                if tag=="RG": RG2=value
+            RG1 = d[key].opt('RG')
+            RG2 = al.opt('RG')
             # RG:Z:ID
             if al.is_read1:
                 printfastq_rg(al,1,RG2)
@@ -43,6 +54,30 @@ def bamtofastq(bamfile):
 #===================================================================================================================================================
 # functions
 #===================================================================================================================================================
+
+def get_args():
+    parser = argparse.ArgumentParser(formatter_class=RawTextHelpFormatter, description="\
+bamtofastq.py\n\
+author: " + __author__ + "\n\
+version: " + __version__ + "\n\
+description: Convert a coordinate sorted BAM file to FASTQ")
+    parser.add_argument('-i', '--input', metavar='BAM', type=str, required=False, help='Input BAM file')
+    parser.add_argument('-r', '--readgroup', metavar='STR', default=None, required=False, help='Read group(s) to extract (comma separated)')
+    parser.add_argument('-S', '--is_sam', required=False, action='store_true', help='Input is SAM format')
+
+    # parse the arguments
+    args = parser.parse_args()
+
+    # if no input, check if part of pipe and if so, read stdin.
+    if args.input == None:
+        if sys.stdin.isatty():
+            parser.print_help()
+            exit(1)
+        else:
+            args.input = sys.stdin
+
+    # send back the user input
+    return args
 
 def printfastq(al,read):
     if(al.is_reverse):
@@ -62,7 +97,7 @@ def revcomp(seq):
     return seq2
 
 #===================================================================================================================================================
-# parsing
+# driver
 #===================================================================================================================================================
 
 class Usage(Exception):
@@ -70,32 +105,15 @@ class Usage(Exception):
         self.msg = msg
 
 def main():
-    
-    usage = """%prog -i <file>
+    args = get_args()
+    bamtofastq(args.input, args.is_sam, args.readgroup)
 
-bamtofastq
-
-
-    """
-    parser = OptionParser(usage)
-    
-    parser.add_option("-i", "--bamfile", dest="bamfile", 
-        help="A BAM file",
-        metavar="FILE")
-
-    (opts, args) = parser.parse_args()
-
-    if opts.bamfile is None:
-        parser.print_help()
-        print
-    else:
-        try:
-            bamtofastq(opts.bamfile)
-        except IOError as err:
-            sys.stderr.write("IOError " + str(err) + "\n");
-            return
 if __name__ == "__main__":
-    sys.exit(main()) 
+    try:
+        sys.exit(main())
+    except IOError, e:
+        if e.errno != 32:  # ignore SIGPIPE
+            raise
     
 # new features needed
 # don't forget to select for primary alignments before using on bwa-mem files - DONE
