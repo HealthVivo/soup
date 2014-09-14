@@ -15,7 +15,7 @@ __author__ = "Ira Hall (ihall@genome.wustl.edu) and Colby Chiang (cc2qe@virginia
 __version__ = "$Revision: 0.0.1 $"
 __date__ = "$Date: 2014-09-04 14:31 $"
 
-def bamtofastq(bamfile, is_sam, readgroup):
+def bamtofastq(bamfile, is_sam, readgroup, rename):
     # get file and header
     if bamfile == "stdin": 
         if is_sam:
@@ -34,15 +34,22 @@ def bamtofastq(bamfile, is_sam, readgroup):
         rg_list = None
 
     d = {}
+    counter = 0
     for al in bam.fetch():
         if al.is_secondary or (rg_list and al.opt('RG') not in rg_list): continue
         key = al.qname
         if key not in d:
             d.setdefault(key,al)
         else:
+            # RG:Z:ID
             RG1 = d[key].opt('RG')
             RG2 = al.opt('RG')
-            # RG:Z:ID
+
+            counter += 1
+            if rename:
+                al.qname = str(counter)
+                d[key].qname = str(counter)
+            
             if al.is_read1:
                 printfastq_rg(al,1,RG2)
                 printfastq_rg(d[key],2,RG1)
@@ -63,6 +70,7 @@ version: " + __version__ + "\n\
 description: Convert a coordinate sorted BAM file to FASTQ")
     parser.add_argument('-i', '--input', metavar='BAM', type=str, required=False, help='Input BAM file')
     parser.add_argument('-r', '--readgroup', metavar='STR', default=None, required=False, help='Read group(s) to extract (comma separated)')
+    parser.add_argument('-n', '--rename', required=False, action='store_true', help='Rename reads')
     parser.add_argument('-S', '--is_sam', required=False, action='store_true', help='Input is SAM format')
 
     # parse the arguments
@@ -106,7 +114,7 @@ class Usage(Exception):
 
 def main():
     args = get_args()
-    bamtofastq(args.input, args.is_sam, args.readgroup)
+    bamtofastq(args.input, args.is_sam, args.readgroup, args.rename)
 
 if __name__ == "__main__":
     try:
