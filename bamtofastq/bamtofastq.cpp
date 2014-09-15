@@ -59,12 +59,24 @@ unsigned hash(char *s) {
   return hashval % HASHSIZE;
 }
 
+unsigned next_hash(unsigned h) {
+  unsigned next_h;
+  while (hashtab[h] != NULL) {
+    h = (h+1) % HASHSIZE;
+  }
+  return h;
+}
+
 /* lookup: look for s in hashtab */
 struct nlist *lookup(char *s) {
   struct nlist *np;
   for (np = hashtab[hash(s)]; np != NULL; np = np->next)
     if (strcmp(s, np->name) == 0)
       return np; /* found */
+    // else {
+    //   cout << "collision \n" << np->name << "\n";
+    //   cout << np->defn->core.flag << "\n";
+    // }
   return NULL; /* not found */
 }
 
@@ -77,11 +89,13 @@ struct nlist *install(char *name, bam1_t *defn) {
     if (np == NULL || (np->name = strdup(name)) == NULL)
       return NULL;
     hashval = hash(name);
-    np->next = hashtab[hashval]; // unclear to me why this is necessary... seems redundant
+    np->next = hashtab[hashval];
     hashtab[hashval] = np;
+    
   } else /* already there */
     // free((void *) np->name); /* free previous name */
-    free((void *) np->defn); /* free previous defn */
+    bam_destroy1(np->defn); /* free previous defn */
+    // free((void *) np->defn); /* free previous defn */
   if ((np->defn = bam_dup1(defn)) == NULL)
     return NULL;
   return np;
@@ -155,9 +169,10 @@ Usage: " << argv[0] << " <bamFile>\n" << '\n';
 
       // add to hash table if mate already there
       nlist *mate = lookup(bam1_qname(bamrec));
+      // cout << "lookedup" << bam1_qname(bamrec) << "\n";
       if (! mate) {
       	install(bam1_qname(bamrec), bamrec);
-	// free((void *) bamrec);
+
       	continue;
       }
       // print the FASTQ for matched pairs
