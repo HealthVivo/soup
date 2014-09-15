@@ -1,7 +1,0 @@
-SAMTOOLS=samtools-0.1.19
-CFLAGS = -I ${SAMTOOLS} -L${SAMTOOLS} -lbam -lz
-
-unmappedToFastq: unmappedToFastq.cpp
-	g++ -o unmappedToFastq unmappedToFastq.cpp ${CFLAGS}
-
-
