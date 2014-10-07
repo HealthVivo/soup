@@ -37,32 +37,27 @@ description: cgquery's output format is horrendous. this reformats it")
 
 # primary function
 def parse_cgquery(file):
-    analysis = None
-    first_entry = True
+    col_keys = ['analysis_id', 'state', 'last_modified', 'upload_date', 'published_date', 'center_name', 'study', 'aliquot_id', 'sample_accession', 'legacy_sample_id', 'disease_abbr', 'tss_id', 'participant_id', 'sample_id', 'analyte_code', 'sample_type', 'library_strategy', 'platform', 'refassem_short_name', 'analysis_submission_uri', 'analysis_full_uri', 'analysis_data_uri']
+    print '#' + '\t'.join(['%s_%s' % (i+1, col_keys[i]) for i in xrange(len(col_keys))])
+    analysis = {} # dict
     for line in file:
         v = line.strip().split(' : ')
         if v[0][:9]=='Analysis ':
-            if first_entry and analysis:
-                header = []
-                name_index = 1
-                for name in analysis:
-                    header.append("%s_%s" % (name_index, name))
-                    name_index += 1
-                print '#' + '\t'.join(header)
-                first_entry = False
-            write_out(analysis)
+            write_out(analysis, col_keys)
             analysis = {} # dict
             continue
-        if type(analysis) is dict:
-            for i in xrange(len(v)):
-                v[i] = v[i].strip()
-                if len(v) == 2:
-                    analysis[v[0]] = v[1]
+        for i in xrange(len(v)):
+            v[i] = v[i].strip()
+            if len(v) == 2 and v[0] in col_keys:
+                analysis[v[0]] = v[1]
     return
 
-def write_out(analysis):
+def write_out(analysis, col_keys):
     if analysis:
-        print '\t'.join([analysis[x] for x in analysis])
+        for key in col_keys:
+            if key not in analysis:
+                analysis[key] = ''
+        print '\t'.join([analysis[x] for x in col_keys])
     return
 
 # --------------------------------------
