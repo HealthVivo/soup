@@ -13,7 +13,6 @@ import subprocess
 import numpy
 
 def bamProfiler(bamfile, concsize, quitnum):
-    print "#---------------------------------------------------------------------------------------------------------------------------------------------------------------"
     fname = str(bamfile)
     fsize = strip(str(subprocess.check_output(["du",'-h',str(bamfile)]))).split("\t")[0]
 
