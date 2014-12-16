@@ -90,7 +90,7 @@ def bamProfiler(bamfile, concsize, quitnum):
 
     for key in frag_hash:
         for i in range(0,1000): 
-            print str(key) + "\t" + str(hist_hash[key][0][i]) + "\t" + str(hist_hash[key][1][i])
+            print "@INS" + "\t" + str(key) + "\t" + str(hist_hash[key][0][i]) + "\t" + str(hist_hash[key][1][i])
 
     for key in rg_hash:
         temp=[]
@@ -98,14 +98,14 @@ def bamProfiler(bamfile, concsize, quitnum):
             temp.append(str(tag) + ":" + str(rg_hash[key][tag]))
         print "@RG" + "\t" + '\t'.join([str(x) for x in temp]) + "\t" + "INPUT:" + str(bamfile)+ "\t" + "INPUT_SIZE:" + fsize
 
-    print "#" + '1=SM' + "\t" + '2=LB' + "\t" + '3=ID' + "\t" + '4=CN' + "\t" + '5=DT' + "\t" + '6=PL' + "\t" + '7=INPUT' + "\t" + '8=INPUT_SIZE' \
+    print "@INFO" + "\t" + "#" + '1=SM' + "\t" + '2=LB' + "\t" + '3=ID' + "\t" + '4=CN' + "\t" + '5=DT' + "\t" + '6=PL' + "\t" + '7=INPUT' + "\t" + '8=INPUT_SIZE' \
     + "\t" + '9=num_reads' + "\t" + '10_is_paired' + "\t" + '11=is_mapped' + "\t" + '12=is_secondary' + "\t" + '13=is_discordant' + "\t" + '14=is_duplicate' \
     + "\t" + '15=fraglen_mean' + "\t" + '16=fraglen_SD' + "\t" + '17=fraglen_median' + "\t" + '18=fraglen_MAD' + "\t" + '19=readlen_mean'
 
     for key in rg_hash:
         x = rg_hash[key]
         p = [x['SM'],x['LB'],x['ID'],x['CN'],x['DT'],x['PL'],str(bamfile),fsize,x['num_reads'],x['is_paired'],x['is_mapped'],x['is_secondary'],x['is_discordant'],x['is_duplicate'],x['fraglen_mean'],x['fraglen_SD'],x['fraglen_median'],x['fraglen_MAD'],x['readlen_mean']]
-        print "\t".join([str(y) for y in p])
+        print "@INFO" + "\t" + "\t".join([str(y) for y in p])
             
 #===================================================================================================================================================
 # functions
@@ -143,11 +143,11 @@ Description: per library bam to fastq from position-sorted bam
         metavar="FILE")
 
     parser.add_option("-c", "--concsize", dest="concsize", default=1000, type = "int",
-        help="max size of concordant readpairs for fragment size determination",
+        help="max size of concordant readpairs for fragment size determination; default = 1000",
         metavar="INT")
         
     parser.add_option("-q", "--quitnum", dest="quitnum", default=10000000, type = "int",
-        help="number of reads to examine to collect read group stats",
+        help="number of reads to examine to collect read group stats; default = 10000000",
         metavar="STR")
         
     (opts, args) = parser.parse_args()

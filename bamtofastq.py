@@ -17,7 +17,7 @@ __date__ = "$Date: 2014-09-04 14:31 $"
 
 def bamtofastq(bamfile, is_sam, readgroup, rename):
     # get file and header
-    if bamfile == "stdin": 
+    if bamfile == None: 
         if is_sam:
             bam = pysam.Samfile("-", "r")
         else:
@@ -36,10 +36,25 @@ def bamtofastq(bamfile, is_sam, readgroup, rename):
     d = {}
     counter = 0
     for al in bam.fetch():
-        if al.is_secondary or (rg_list and al.opt('RG') not in rg_list): continue
+        # must be primary read alignment
+        if (al.is_secondary):
+            continue
+
+        # must be in a user specified readgroup
+        if rg_list and al.opt('RG') not in rg_list:
+            continue
+
+        # ensures the read is not hard-clipped. important
+        # when the BAM doesn't have shorter hits flagged as
+        # secondary
+        if 5 in [x[0] for x in al.cigar]:
+            continue
+
+        # add read name to dictionary if not already there
         key = al.qname
         if key not in d:
             d.setdefault(key,al)
+        # print matched read pairs
         else:
             # RG:Z:ID
             RG1 = d[key].opt('RG')
@@ -47,8 +62,8 @@ def bamtofastq(bamfile, is_sam, readgroup, rename):
 
             counter += 1
             if rename:
-                al.qname = str(counter)
-                d[key].qname = str(counter)
+                al.qname = RG2 + '.' + str(counter)
+                d[key].qname = RG1 + '.' + str(counter)
             
             if al.is_read1:
                 printfastq_rg(al,1,RG2)
@@ -68,21 +83,13 @@ bamtofastq.py\n\
 author: " + __author__ + "\n\
 version: " + __version__ + "\n\
 description: Convert a coordinate sorted BAM file to FASTQ")
-    parser.add_argument('-i', '--input', metavar='BAM', type=str, required=False, help='Input BAM file')
+    parser.add_argument('-i', '--input', metavar='BAM', required=False, help='Input BAM file')
     parser.add_argument('-r', '--readgroup', metavar='STR', default=None, required=False, help='Read group(s) to extract (comma separated)')
     parser.add_argument('-n', '--rename', required=False, action='store_true', help='Rename reads')
     parser.add_argument('-S', '--is_sam', required=False, action='store_true', help='Input is SAM format')
 
     # parse the arguments
     args = parser.parse_args()
-
-    # if no input, check if part of pipe and if so, read stdin.
-    if args.input == None:
-        if sys.stdin.isatty():
-            parser.print_help()
-            exit(1)
-        else:
-            args.input = sys.stdin
 
     # send back the user input
     return args
