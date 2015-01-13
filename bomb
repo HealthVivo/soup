@@ -1,0 +1,66 @@
+#!/usr/bin/env python
+
+import argparse, sys
+from argparse import RawTextHelpFormatter
+
+__author__ = "Colby Chiang (cc2qe@virginia.edu)"
+__version__ = "$Revision: 0.0.1 $"
+__date__ = "$Date: 2015-01-13 15:15 $"
+
+# --------------------------------------
+# define functions
+
+def get_args():
+    parser = argparse.ArgumentParser(formatter_class=RawTextHelpFormatter, description="\
+bomb\n\
+author: " + __author__ + "\n\
+version: " + __version__ + "\n\
+description: Constructor for bsub jobs")
+    parser.add_argument('-q', '--queue', metavar='STRING', type=str, required=False, default='long', help='queue [long]')
+    parser.add_argument('-t', '--threads', metavar='INT', type=int, required=False, default=1, help='number of threads [1]')
+    parser.add_argument('-m', '--mem', metavar='INT', type=int, required=False, default=8, help='memory in gigabytes [8]')
+    parser.add_argument('-n', '--num_hosts', metavar='INT', type=int, required=False, default=1, help='number of hosts [1]')
+    parser.add_argument('-J', '--job_name', metavar='STRING', type=str, required=False, help='job name [cmd]')
+    parser.add_argument('-o', '--out', metavar='FILE', type=str, required=False, default='%%J.out', help='output log [%%J.out]')
+    parser.add_argument('-e', '--err', metavar='FILE', type=str, required=False, default='%%J.err', help='error log [%%J.err]')
+    parser.add_argument('-E', '--email', metavar='STRING', type=str, required=False, help='email address to send logs')
+    parser.add_argument('cmd', metavar='STRING', nargs=1, type=str, help='command to submit to LSF [stdin]')
+
+    # parse the arguments
+    args = parser.parse_args()
+
+    # send back the user input
+    return args
+
+# primary function
+def construct_bsub(args):
+    bstring = "bsub"
+
+    bstring += " -q %s -n %s" % (args.queue,
+                                 args.threads)
+    bstring += " -M %s000000 -R \"select[mem>%s000] rusage[mem=%s000] span[hosts=%s]\"" % (args.mem,
+                                                                                           args.mem,
+                                                                                           args.mem,
+                                                                                           args.num_hosts)
+    
+    return bstring
+
+# --------------------------------------
+# main function
+
+def main():
+    # parse the command line args
+    args = get_args()
+
+    # call primary function
+    bstring = construct_bsub(args)
+
+    print bstring
+
+# initialize the script
+if __name__ == '__main__':
+    try:
+        sys.exit(main())
+    except IOError, e:
+        if e.errno != 32:  # ignore SIGPIPE
+            raise
