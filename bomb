@@ -17,14 +17,15 @@ bomb\n\
 author: " + __author__ + "\n\
 version: " + __version__ + "\n\
 description: Constructor for bsub jobs")
-    parser.add_argument('-q', '--queue', metavar='STRING', type=str, required=False, default='long', help='queue [long]')
+    parser.add_argument('-q', '--queue', metavar='QUEUE', type=str, required=False, default=None, help='queue')
     parser.add_argument('-t', '--threads', metavar='INT', type=int, required=False, default=1, help='number of threads [1]')
     parser.add_argument('-m', '--mem', metavar='INT', type=int, required=False, default=8, help='memory in gigabytes [8]')
-    parser.add_argument('-n', '--num_hosts', metavar='INT', type=int, required=False, default=1, help='number of hosts [1]')
-    parser.add_argument('-J', '--job_name', metavar='STRING', type=str, required=False, help='job name [cmd]')
-    parser.add_argument('-o', '--out', metavar='FILE', type=str, required=False, default='%J.out', help='output log [%%J.out]')
-    parser.add_argument('-e', '--err', metavar='FILE', type=str, required=False, default='%J.err', help='error log [%%J.err]')
-    parser.add_argument('-E', '--email', metavar='STRING', type=str, required=False, help='email address to send logs')
+    parser.add_argument('-n', '--num_hosts', metavar='NUM_HOSTS', type=int, required=False, default=1, help='number of hosts [1]')
+    parser.add_argument('-J', '--job_name', metavar='JOB_NAME', type=str, required=False, help='job name [cmd]')
+    parser.add_argument('-o', '--out', metavar='OUT', type=str, required=False, default='%J.out', help='output log [%%J.out]')
+    parser.add_argument('-e', '--err', metavar='ERR', type=str, required=False, default='%J.err', help='error log [%%J.err]')
+    parser.add_argument('-E', '--email', metavar='EMAIL', type=str, required=False, default=None, help='email address to send logs')
+    parser.add_argument('-d', '--dry_run', action='store_true', required=False, help='print the command and exit')
     parser.add_argument('cmd', metavar='COMMAND', type=str, help='command to submit to LSF [stdin]')
 
     # parse the arguments
@@ -36,7 +37,6 @@ description: Constructor for bsub jobs")
 # primary function
 def bsub(args):
     bcmd = map(str, ['bsub',
-                     '-q', args.queue,
                      '-n', args.threads,
                      '-M', '%s000000' % args.mem,
                      '-R', 'select[mem>%s000] rusage[mem=%s] span[hosts=%s]' % (args.mem,
@@ -44,11 +44,19 @@ def bsub(args):
                                                                                 args.num_hosts),
                      '-J', args.job_name,
                      '-o', args.out,
-                     '-e', args.err,
-                     args.cmd])
+                     '-e', args.err])
 
-    proc = subprocess.call(bcmd)
-    print ' '.join(bcmd)
+    if args.queue is not None:
+        bcmd += ['-q', args.queue]
+
+    if args.email is not None:
+        bcmd += ['-N', '-u', args.email]
+
+    bcmd += [args.cmd]
+
+    print ' '.join(bcmd);
+    if not args.dry_run:
+        proc = subprocess.call(bcmd)
 
     return
 
@@ -58,6 +66,9 @@ def bsub(args):
 def main():
     # parse the command line args
     args = get_args()
+
+    if args.job_name is None:
+        args.job_name = args.cmd
 
     # call primary function
     bsub(args)
