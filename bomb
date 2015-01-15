@@ -39,7 +39,7 @@ def bsub(args):
     bcmd = map(str, ['bsub',
                      '-n', args.threads,
                      '-M', '%s000000' % args.mem,
-                     '-R', 'select[mem>%s000] rusage[mem=%s] span[hosts=%s]' % (args.mem,
+                     '-R', 'select[mem>%s000] rusage[mem=%s000] span[hosts=%s]' % (args.mem,
                                                                                 args.mem,
                                                                                 args.num_hosts),
                      '-J', args.job_name,
