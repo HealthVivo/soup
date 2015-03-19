@@ -24,6 +24,8 @@ description: Constructor for bsub jobs")
     parser.add_argument('-J', '--job_name', metavar='NAME', type=str, required=False, help='job name [cmd]')
     parser.add_argument('-o', '--out', metavar='OUT', type=str, required=False, default='%J.log', help='output log [%%J.log]')
     parser.add_argument('-e', '--err', metavar='ERR', type=str, required=False, default='%J.log', help='error log [%%J.log]')
+    parser.add_argument('-x', '--exclude_host', metavar='HOST', type=str, required=False, default=None, help='comma delimited list of hosts to exclude')
+    parser.add_argument('-i', '--include_host', metavar='HOST', type=str, required=False, default=None, help='comma delimited list of hosts to include')
     parser.add_argument('-E', '--email', metavar='EMAIL', type=str, required=False, default=None, help='email address to send logs')
     parser.add_argument('-d', '--dry_run', action='store_true', required=False, help='print the LSF command and exit')
     parser.add_argument('cmd', metavar='COMMAND', type=str, help='command to submit to LSF')
@@ -39,7 +41,7 @@ def bsub(args):
     bcmd = map(str, ['bsub',
                      '-n', args.threads,
                      '-M', '%s000000' % args.mem,
-                     '-R', 'select[mem>%s000] rusage[mem=%s000] span[hosts=%s]' % (args.mem,
+                     '-R', '\"select[mem>%s000] rusage[mem=%s000] span[hosts=%s]\"' % (args.mem,
                                                                                 args.mem,
                                                                                 args.num_hosts),
                      '-J', args.job_name,
@@ -51,6 +53,14 @@ def bsub(args):
 
     if args.email is not None:
         bcmd += ['-N', '-u', args.email]
+
+    if args.include_host is not None:
+        for host in args.include_host.split(','):
+            bcmd += ['-R', '\"select[hname==\'%s\']\"' % host]
+
+    if args.exclude_host is not None:
+        for host in args.exclude_host.split(','):
+            bcmd += ['-R', '\"select[hname!=\'%s\']\"' % host]
 
     bcmd += [args.cmd]
 
