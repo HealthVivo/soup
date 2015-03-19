@@ -17,15 +17,16 @@ bomb\n\
 author: " + __author__ + "\n\
 version: " + __version__ + "\n\
 description: Constructor for bsub jobs")
+    parser.add_argument('-J', '--job_name', metavar='NAME', type=str, required=False, help='job name [cmd]')
+    parser.add_argument('-g', '--job_group', metavar='GROUP', type=str, required=False, default=None, help='job group')
     parser.add_argument('-q', '--queue', metavar='QUEUE', type=str, required=False, default=None, help='queue')
     parser.add_argument('-t', '--threads', metavar='INT', type=int, required=False, default=1, help='number of threads [1]')
     parser.add_argument('-m', '--mem', metavar='INT', type=int, required=False, default=8, help='memory in gigabytes [8]')
     parser.add_argument('-n', '--num_hosts', metavar='INT', type=int, required=False, default=1, help='number of hosts [1]')
-    parser.add_argument('-J', '--job_name', metavar='NAME', type=str, required=False, help='job name [cmd]')
-    parser.add_argument('-o', '--out', metavar='OUT', type=str, required=False, default='%J.log', help='output log [%%J.log]')
-    parser.add_argument('-e', '--err', metavar='ERR', type=str, required=False, default='%J.log', help='error log [%%J.log]')
     parser.add_argument('-x', '--exclude_host', metavar='HOST', type=str, required=False, default=None, help='comma delimited list of hosts to exclude')
     parser.add_argument('-i', '--include_host', metavar='HOST', type=str, required=False, default=None, help='comma delimited list of hosts to include')
+    parser.add_argument('-o', '--out', metavar='OUT', type=str, required=False, default='%J.log', help='output log [%%J.log]')
+    parser.add_argument('-e', '--err', metavar='ERR', type=str, required=False, default='%J.log', help='error log [%%J.log]')
     parser.add_argument('-E', '--email', metavar='EMAIL', type=str, required=False, default=None, help='email address to send logs')
     parser.add_argument('-d', '--dry_run', action='store_true', required=False, help='print the LSF command and exit')
     parser.add_argument('cmd', metavar='COMMAND', type=str, help='command to submit to LSF')
@@ -50,6 +51,9 @@ def bsub(args):
 
     if args.queue is not None:
         bcmd += ['-q', args.queue]
+
+    if args.job_group is not None:
+        bcmd += ['-g', args.job_group]
 
     if args.email is not None:
         bcmd += ['-N', '-u', args.email]
