@@ -68,7 +68,7 @@ def bsub(args):
             bcmd += ['-R', '\"select[hname!=\'%s\']\"' % host]
     
     if args.dependency_expression is not None:
-        bcmd += ['-w', '\"%s\"' % args.dependency_expression]
+        bcmd += ['-w', '%s' % args.dependency_expression]
 
     bcmd += [args.cmd]
 
