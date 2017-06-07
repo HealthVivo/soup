@@ -29,6 +29,7 @@ description: Constructor for bsub jobs")
     parser.add_argument('-o', '--out', metavar='STR', type=str, required=False, default='%J.log', help='output log [%%J.log]')
     parser.add_argument('-e', '--err', metavar='STR', type=str, required=False, default='%J.log', help='error log [%%J.log]')
     parser.add_argument('-E', '--email', metavar='STR', type=str, required=False, default=None, help='email address to send logs')
+    parser.add_argument('-a', '--additional_esub_information', metavar='STR', type=str, required=False, default=None, help='additional arguments (e.g.: \'docker(user/image:latest)\')')
     parser.add_argument('-d', '--dry_run', action='store_true', required=False, help='print the LSF command and exit')
     parser.add_argument('cmd', metavar='STR', type=str, help='command to submit to LSF')
 
@@ -69,6 +70,9 @@ def bsub(args):
     
     if args.dependency_expression is not None:
         bcmd += ['-w', '%s' % args.dependency_expression]
+
+    if args.additional_esub_information is not None:
+        bcmd += ['-a', '%s' % args.additional_esub_information]
 
     bcmd += [args.cmd]
 
